@@ -130,6 +130,11 @@ function m.toggle:handle(pointer, is_hovered, is_down, was_pressed, was_released
 end
 
 
+function m.toggle:set(state)
+  self.state = state and true or false
+end
+
+
 -- PROGRESS ---------------------------------------------------------------------
 m.progress = {}
 m.progress.defaults = {text = '', value = 0}
@@ -145,8 +150,6 @@ end
 
 
 function m.progress:draw(pass)
-  pass:setColor(palette.background)
-  pass:roundrect(0, 0, -0.2,  self.span, 1, 0.2,  0, 0,1,0, 0.1)
   pass:setColor(palette.text)
   pass:text(self.text, 0, 0, 0.1,  0.2)
   local aw = self.span - 2 * self.margin -- available width
@@ -165,14 +168,27 @@ end
 -- SLIDER ---------------------------------------------------------------------
 m.slider = {}
 m.slider.__index = m.slider
-m.slider.defaults = {text = '', min = 0, max = 1, value = 0}
+m.slider.defaults = {text = '', min = 0, max = 1, value = 0, step = nil, callback = nil}
 table.insert(m.widget_types, 'slider')
+
+local function roundBy(value, step)
+    local quant, frac = math.modf(value / step)
+    return step * (quant + (frac > 0.5 and 1 or 0))
+end
+
 
 function m.slider.init(options)
   local w = setmetatable({}, m.slider)
   w.text = options.text
   w.min = options.min
   w.max = options.max
+  w.callback = options.callback
+  w.step = options.step
+  w.format = '%s %.2f'
+  if w.step then
+    local digits = math.max(0, math.ceil(-math.log(w.step, 10)))
+    w.format = string.format('%%s %%.%df', digits)
+  end
   w:set(options.value)
   w.margin = 0.15
   return w
@@ -185,8 +201,7 @@ function m.slider:draw(pass)
     palette.background)
   pass:roundrect(0, 0, -0.2,  self.span, 1, 0.2,  0, 0,1,0, 0.1)
   pass:setColor(palette.text)
-  local text = string.format('%s %1.2f', self.text, self.value)
-  pass:text(text, 0, 0, 0.1,  0.2)
+  pass:text(string.format(self.format, self.text, self.value), 0, 0, 0.1,  0.2)
   local aw = self.span - 2 * self.margin -- available width
   local w = (self.value - self.min) / (self.max - self.min) * aw
   pass:box(0, -0.3, 0.02,   aw * 0.95, 0.08, 0.04)
@@ -204,8 +219,11 @@ function m.slider:handle(pointer, is_hovered, is_down, was_pressed, was_released
     local pointer_pos = vec3(pointer)
     -- on click action
     local aw = self.span - 2 * self.margin -- available width
-    self.value = self.min + (aw / 2 + pointer_pos.x) / aw * (self.max - self.min)
-    self.value = math.max(self.min, math.min(self.max, self.value))
+    local value = self.min + (aw / 2 + pointer_pos.x) / aw * (self.max - self.min)
+    self:set(value)
+  end
+  if was_released and is_hovered and self.callback then
+    self.callback(self, self.value)
   end
 end
 
@@ -216,6 +234,9 @@ end
 
 
 function m.slider:set(value)
+  if self.step then
+    value = roundBy(value, self.step)
+  end
   self.value = math.max(self.min, math.min(self.max, value))
 end
 

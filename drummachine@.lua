@@ -26,12 +26,12 @@ end
 
 local seq_table = defaultdict(function() return {} end)
 local sequencer = ui.panel(mat4():target(vec3(0, 0.1, -0.6), vec3(0, 0, 0)):scale(0.2))
-local labels = {}
 local volumes = {}
 local pitches = {}
 
 for r, instrument in ipairs(instruments) do
-  sequencer:button{text=instrument.name, callback=function() instrument.sample:clone():play() end}
+  sequencer:button{callback=function() instrument.sample:clone():play() end}
+  sequencer:label{text=instrument.name}
 
   volumes[r] = sequencer:slider{span=2, text='vol',   min=0, max=1, value=1}
   pitches[r] = sequencer:slider{span=2, text='pitch', min=0.25, max=4, value=r}
@@ -44,14 +44,13 @@ for r, instrument in ipairs(instruments) do
 --]]
 end
 
+local tempo = sequencer:slider{span=5, text='tempo', min=64, max=216, value=116, step=0.5}
+local progress = sequencer:progress{span=12, text='bar'}
+progress.margin = 0
 
-local progress = sequencer:progress{span=5, text='bar'}
-
-for c = 1, step_count do
-  labels[c] = sequencer:label{text = '.'}
-end
 sequencer:row()
-tempo = sequencer:slider{span=5, text='tempo', min=64, max=216, value=116}
+local steps = sequencer:slider{span=5, text='steps', min=4, max=32, value=12, step=1, callback=modifiedSteps}
+sequencer:spacer{span=12}
 
 sequencer:asGrid()
 
@@ -71,9 +70,6 @@ function lovr.update(dt)
   -- normalized bar time
   local bar_time = time % step_count
   progress:set(bar_time / step_count)
-  for i, label in ipairs(labels) do
-    label.text = math.floor(bar_time) == i - 1 and '^' or ''
-  end
   if math.floor(bar_time) ~= last_step then
     last_step = math.floor(bar_time)
     -- play bar
