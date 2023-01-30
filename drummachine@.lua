@@ -31,21 +31,22 @@ local volumes = {}
 local pitches = {}
 
 for r, instrument in ipairs(instruments) do
-  sequencer:button(instrument.name, function() instrument.sample:play() end)
-  volumes[r] = sequencer:slider('vol',   0, 1, 1)
-  pitches[r] = sequencer:slider('pitch', 0.25, 4, 1)
+  sequencer:button(1, instrument.name, function() instrument.sample:play() end)
+  volumes[r] = sequencer:slider(2, 'vol',   0, 1, 1)
+  pitches[r] = sequencer:slider(2, 'pitch', 0.25, 4, 1)
+  pitches[r]:set(r)
   for c = 1, step_count do
-    sequencer:toggle(' ', function(_, state)
+    sequencer:toggle(1, ' ', function(_, state)
          seq_table[r][c] = state
        end)
   end
   sequencer:row()
 end
 
-local progress = sequencer:progress('bar')
+local progress = sequencer:progress(5, 'bar')
 
 for c = 1, step_count do
-  labels[c] = sequencer:label('')
+  labels[c] = sequencer:label(1, '')
 end
 
 sequencer:asGrid()
