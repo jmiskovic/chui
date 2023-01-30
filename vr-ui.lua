@@ -22,9 +22,7 @@ m.spacer = {}
 m.spacer.defaults = {}
 table.insert(m.widget_types, 'spacer')
 
-function m.spacer.init()
-  local w = setmetatable({}, m.spacer)
-  return w
+function m.spacer:init()
 end
 
 
@@ -37,10 +35,8 @@ m.label = {}
 m.label.defaults = {text = ''}
 table.insert(m.widget_types, 'label')
 
-function m.label.init(options)
-  local w = setmetatable({}, m.label)
-  w.text = options.text
-  return w
+function m.label:init(options)
+  self.text = options.text
 end
 
 
@@ -57,12 +53,10 @@ m.button = {}
 m.button.defaults = {text = '', callback = nil}
 table.insert(m.widget_types, 'button')
 
-function m.button.init(options)
-  local w = setmetatable({}, m.button)
-  w.text = options.text
-  w.callback = options.callback
-  w.hovered = false
-  return w
+function m.button:init(options)
+  self.text = options.text
+  self.callback = options.callback
+  self.hovered = false
 end
 
 
@@ -70,7 +64,7 @@ function m.button:draw(pass)
   pass:setColor(
     (self.hovered and palette.hover_background) or
     palette.background)
-  pass:roundrect(0, 0, -0.1,  1, 1, 0.2,  0, 0,1,0, 0.2)
+  pass:roundrect(0, 0, -0.1,  self.span, 1, 0.2,  0, 0,1,0, 0.2)
   pass:setColor(palette.text)
   pass:text(self.text, 0, 0, 0.2,  0.2)
 end
@@ -94,13 +88,11 @@ m.toggle = {}
 m.toggle.defaults = {text = '', callback = nil}
 table.insert(m.widget_types, 'toggle')
 
-function m.toggle.init(options)
-  local w = setmetatable({}, m.toggle)
-  w.text = options.text
-  w.callback = options.callback
-  w.state = false
-  w.hovered = false
-  return w
+function m.toggle:init(options)
+  self.text = options.text
+  self.callback = options.callback
+  self.state = false
+  self.hovered = false
 end
 
 
@@ -109,7 +101,7 @@ function m.toggle:draw(pass)
     (self.hovered and palette.hover_background) or
     (self.state and palette.active) or
     palette.background)
-  pass:roundrect(0, 0, -0.1,  1, 1, 0.2,  0, 0,1,0, 0.2)
+  pass:roundrect(0, 0, -0.1,  self.span, 1, 0.2,  0, 0,1,0, 0.2)
   pass:setColor(palette.text)
   pass:text(self.text, 0, 0, 0.2,  0.2)
 end
@@ -140,12 +132,10 @@ m.progress = {}
 m.progress.defaults = {text = '', value = 0}
 table.insert(m.widget_types, 'progress')
 
-function m.progress.init(options)
-  local w = setmetatable({}, m.progress)
-  w.text = options.text
-  w:set(options.value)
-  w.margin = 0.15
-  return w
+function m.progress:init(options)
+  self.text = options.text
+  self:set(options.value)
+  self.margin = 0.15
 end
 
 
@@ -177,21 +167,19 @@ local function roundBy(value, step)
 end
 
 
-function m.slider.init(options)
-  local w = setmetatable({}, m.slider)
-  w.text = options.text
-  w.min = options.min
-  w.max = options.max
-  w.callback = options.callback
-  w.step = options.step
-  w.format = '%s %.2f'
-  if w.step then
-    local digits = math.max(0, math.ceil(-math.log(w.step, 10)))
-    w.format = string.format('%%s %%.%df', digits)
+function m.slider:init(options)
+  self.text = options.text
+  self.min = options.min
+  self.max = options.max
+  self.callback = options.callback
+  self.step = options.step
+  self.format = '%s %.2f'
+  if self.step then
+    local digits = math.max(0, math.ceil(-math.log(self.step, 10)))
+    self.format = string.format('%%s %%.%df', digits)
   end
-  w:set(options.value)
-  w.margin = 0.15
-  return w
+  self:set(options.value)
+  self.margin = 0.15
 end
 
 
@@ -337,7 +325,8 @@ for i, widget_name in ipairs(m.widget_types) do
     local widget_table = m[widget_name]
     widget_table.defaults.__index = widget_table.defaults
     setmetatable(options, widget_table.defaults)
-    local widget = widget_table.init(options)
+    local widget = setmetatable({}, widget_table)
+    widget:init(options)
     widget.span = options.span or 1
     table.insert(self.widgets, widget)
     table.insert(self.rows[#self.rows], widget)
