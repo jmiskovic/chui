@@ -19,7 +19,7 @@ m.widget_types = {}
 
 -- SPACER ---------------------------------------------------------------------
 m.spacer = {}
-m.spacer.__index = m.spacer
+m.spacer.defaults = {}
 table.insert(m.widget_types, 'spacer')
 
 function m.spacer.init()
@@ -34,12 +34,12 @@ end
 
 -- LABEL ----------------------------------------------------------------------
 m.label = {}
-m.label.__index = m.label
+m.label.defaults = {text = ''}
 table.insert(m.widget_types, 'label')
 
-function m.label.init(text)
+function m.label.init(options)
   local w = setmetatable({}, m.label)
-  w.text = text
+  w.text = options.text
   return w
 end
 
@@ -54,13 +54,13 @@ end
 
 -- BUTTON ---------------------------------------------------------------------
 m.button = {}
-m.button.__index = m.button
+m.button.defaults = {text = '', callback = nil}
 table.insert(m.widget_types, 'button')
 
-function m.button.init(text, callback)
+function m.button.init(options)
   local w = setmetatable({}, m.button)
-  w.text = text
-  w.callback = callback
+  w.text = options.text
+  w.callback = options.callback
   w.hovered = false
   return w
 end
@@ -91,13 +91,13 @@ end
 
 -- TOGGLE ---------------------------------------------------------------------
 m.toggle = {}
-m.toggle.__index = m.toggle
+m.toggle.defaults = {text = '', callback = nil}
 table.insert(m.widget_types, 'toggle')
 
-function m.toggle.init(text, callback)
+function m.toggle.init(options)
   local w = setmetatable({}, m.toggle)
-  w.text = text
-  w.callback = callback
+  w.text = options.text
+  w.callback = options.callback
   w.state = false
   w.hovered = false
   return w
@@ -132,13 +132,13 @@ end
 
 -- PROGRESS ---------------------------------------------------------------------
 m.progress = {}
-m.progress.__index = m.progress
+m.progress.defaults = {text = '', value = 0}
 table.insert(m.widget_types, 'progress')
 
-function m.progress.init(text)
+function m.progress.init(options)
   local w = setmetatable({}, m.progress)
-  w.text = text
-  w.value = 0
+  w.text = options.text
+  w:set(options.value)
   w.margin = 0.15
   return w
 end
@@ -151,7 +151,7 @@ function m.progress:draw(pass)
   pass:text(self.text, 0, 0, 0.1,  0.2)
   local aw = self.span - 2 * self.margin -- available width
   local w = self.value * aw
-  pass:roundrect(0, -0.3, 0.02,  aw, 0.08, 0.04,  0, 0,1,0, 0.01)
+  pass:box(0, -0.3, 0.02,  aw * 0.95, 0.08, 0.04)
   pass:setColor(palette.active)
   pass:roundrect(-aw / 2 + w / 2, -0.3, 0.03,  w, 0.16, 0.06,  0, 0,1,0, 0.05)
 end
@@ -165,17 +165,15 @@ end
 -- SLIDER ---------------------------------------------------------------------
 m.slider = {}
 m.slider.__index = m.slider
+m.slider.defaults = {text = '', min = 0, max = 1, value = 0}
 table.insert(m.widget_types, 'slider')
 
-function m.slider.init(text, min, max, value)
-  min = min or 0
-  max = max or 1
-  value = value or min
+function m.slider.init(options)
   local w = setmetatable({}, m.slider)
-  w.text = text
-  w.min = math.min(min, max)
-  w.max = math.max(min, max)
-  w.value = value
+  w.text = options.text
+  w.min = options.min
+  w.max = options.max
+  w:set(options.value)
   w.margin = 0.15
   return w
 end
@@ -191,7 +189,7 @@ function m.slider:draw(pass)
   pass:text(text, 0, 0, 0.1,  0.2)
   local aw = self.span - 2 * self.margin -- available width
   local w = (self.value - self.min) / (self.max - self.min) * aw
-  pass:box(0, -0.3, 0.02,   aw, 0.08, 0.04)
+  pass:box(0, -0.3, 0.02,   aw * 0.95, 0.08, 0.04)
   pass:setColor(palette.active)
   pass:roundrect((w - aw) / 2, -0.3, 0.03,  w, 0.16, 0.06,  0, 0,1,0, 0.05)
 end
@@ -232,6 +230,8 @@ function m.panel(pose)
   self.pose:rotate(math.pi, 0,1,0)
   self.widgets = {}
   self.rows = {{}}
+  self.width = 0
+  self.height = 0
   return self
 end
 
@@ -269,6 +269,8 @@ end
 
 
 function panel:asGrid()
+  self.width = 0
+  self.height = 0
   local spreading = 1.1
   for r, row in ipairs(self.rows) do
     local width = 0
@@ -281,15 +283,20 @@ function panel:asGrid()
       local y = spreading * (-r + #self.rows / 2)
       widget.pose = lovr.math.newMat4(x, y, 0)
       col = col + widget.span
+      self.width = math.max(self.width, col)
+    end
+    if #row then
+      self.height = self.height + 1
     end
   end
+  self.width = self.width + (self.width - 1)    * (spreading - 1)
+  self.height = self.height + (self.height - 1) * (spreading - 1)
 end
 
 
 function panel:draw(pass)
   pass:push()
   pass:transform(self.pose)
-  pass:box(0, 0, -0.3,  17, 3, 0.1)
   pass:setFont(m.font)
   for i, w in ipairs(self.widgets) do
     pass:push()
@@ -303,9 +310,14 @@ end
 
 -- constructors
 for i, widget_name in ipairs(m.widget_types) do
-  panel[widget_name] = function(self, span, ...)
-    local widget = m[widget_name].init(...)
-    widget.span = span
+  local widget_table = m[widget_name]
+  widget_table.__index = widget_table
+  panel[widget_name] = function(self, options)
+    local widget_table = m[widget_name]
+    widget_table.defaults.__index = widget_table.defaults
+    setmetatable(options, widget_table.defaults)
+    local widget = widget_table.init(options)
+    widget.span = options.span or 1
     table.insert(self.widgets, widget)
     table.insert(self.rows[#self.rows], widget)
     return widget

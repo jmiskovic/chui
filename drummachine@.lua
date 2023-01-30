@@ -3,8 +3,8 @@ local ui = require'vr-ui'
 
 local instruments = {
   {name='snare',     sample=lovr.audio.newSource('dm-snare.ogg',     {pitchable=true, spatial=false})},
-  {name='hatopen',   sample=lovr.audio.newSource('dm-hatopen.ogg',   {pitchable=true, spatial=false})},
-  {name='hatclosed', sample=lovr.audio.newSource('dm-hatclosed.ogg', {pitchable=true, spatial=false})},
+  {name='hh-open',   sample=lovr.audio.newSource('dm-hatopen.ogg',   {pitchable=true, spatial=false})},
+  {name='hh-closed', sample=lovr.audio.newSource('dm-hatclosed.ogg', {pitchable=true, spatial=false})},
   {name='bass',      sample=lovr.audio.newSource('dm-bass.ogg',      {pitchable=true, spatial=false})},
 }
 
@@ -31,23 +31,27 @@ local volumes = {}
 local pitches = {}
 
 for r, instrument in ipairs(instruments) do
-  sequencer:button(1, instrument.name, function() instrument.sample:play() end)
-  volumes[r] = sequencer:slider(2, 'vol',   0, 1, 1)
-  pitches[r] = sequencer:slider(2, 'pitch', 0.25, 4, 1)
-  pitches[r]:set(r)
+  sequencer:button{text=instrument.name, callback=function() instrument.sample:clone():play() end}
+
+  volumes[r] = sequencer:slider{span=2, text='vol',   min=0, max=1, value=1}
+  pitches[r] = sequencer:slider{span=2, text='pitch', min=0.25, max=4, value=r}
   for c = 1, step_count do
-    sequencer:toggle(1, ' ', function(_, state)
+    sequencer:toggle{callback = function(_, state)
          seq_table[r][c] = state
-       end)
+       end}
   end
   sequencer:row()
+--]]
 end
 
-local progress = sequencer:progress(5, 'bar')
+
+local progress = sequencer:progress{span=5, text='bar'}
 
 for c = 1, step_count do
-  labels[c] = sequencer:label(1, '')
+  labels[c] = sequencer:label{text = '.'}
 end
+sequencer:row()
+tempo = sequencer:slider{span=5, text='tempo', min=64, max=216, value=116}
 
 sequencer:asGrid()
 
@@ -58,10 +62,14 @@ end
 
 local last_step = 7
 
+local time = 0
+
 function lovr.update(dt)
+  bar_length = 4 * 60 / tempo:get()
   sequencer:update(dt)
+  time = time + dt / bar_length * step_count
   -- normalized bar time
-  local bar_time = lovr.timer.getTime() / bar_length * step_count % step_count
+  local bar_time = time % step_count
   progress:set(bar_time / step_count)
   for i, label in ipairs(labels) do
     label.text = math.floor(bar_time) == i - 1 and '^' or ''
