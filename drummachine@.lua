@@ -1,3 +1,4 @@
+--require'vheadset'
 local mousearm = require'mousearm'
 local ui = require'vr-ui'
 
@@ -30,18 +31,17 @@ local volumes = {}
 local pitches = {}
 
 for r, instrument in ipairs(instruments) do
-  sequencer:button{callback=function() instrument.sample:clone():play() end}
+  sequencer:button{span=0.3, callback=function() instrument.sample:clone():play() end}
   sequencer:label{text=instrument.name}
 
   volumes[r] = sequencer:slider{span=2, text='vol',   min=0, max=1, value=1}
   pitches[r] = sequencer:slider{span=2, text='pitch', min=0.25, max=4, value=r}
   for c = 1, step_count do
-    sequencer:toggle{callback = function(_, state)
+    sequencer:toggle{span=0.6, callback = function(_, state)
          seq_table[r][c] = state
        end}
   end
   sequencer:row()
---]]
 end
 
 local tempo = sequencer:slider{span=5, text='tempo', min=64, max=216, value=116, step=0.5}
@@ -84,8 +84,13 @@ function lovr.update(dt)
   end
 end
 
+--lovr.graphics.setBackgroundColor(lovr.math.linearToGamma(0.2, 0.2, 0.2))
 
 function lovr.draw(pass)
   sequencer:draw(pass)
   pass:sphere(vec3(lovr.headset.getPosition('hand/left')), 0.02)
 end
+
+
+
+
