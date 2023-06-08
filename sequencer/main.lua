@@ -39,10 +39,10 @@ local seq_table = defaultdict(function() return {} end)
 local sequencer_panel = chui.panel{
   palette = chui.palettes[6],
   pose=mat4()
-    :translate(0, 1.5, -1)
+    :translate(0, 1.65, -0.3)
     :rotate(math.pi, 0,1,0)
     :rotate(0.2, 1,0,0)
-    :scale(0.16)
+    :scale(0.04)
   }
 local volume_sliders = {}
 local pitch_sliders = {}
@@ -74,6 +74,7 @@ sequencer_panel:layout()
 
 local last_step = 7
 local time = 0
+lovr.graphics.setBackgroundColor(1,1,1)
 
 function lovr.update(dt)
   sequencer_panel:update(dt) -- allow ui to process interactions

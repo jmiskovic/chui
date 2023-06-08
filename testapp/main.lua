@@ -60,7 +60,7 @@ function lovr.update(dt)
   colorizer.update(dt)
 end
 
---lovr.graphics.setBackgroundColor(1,1,1)
+lovr.graphics.setBackgroundColor(1,1,1)
 
 function lovr.draw(pass)
   pass:setWireframe(lovr.system.isKeyDown('tab')) --  x-vision

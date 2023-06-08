@@ -4,8 +4,8 @@ local chui = require'chui'
 local keyboard = require'vqwerty' -- pressed keys are received with lovr.textinput & lovr.keypressed
 keyboard.pose:set(
   mat4()
-    :target(vec3(0, 1, -1.5), vec3(0, 1, 0))
-    :scale(0.1))
+    :target(vec3(0, 1.6, -0.35), vec3(0, 2, 0))
+    :scale(0.03))
 
 -- chui lib doesn't have a rich input field, only the label widget
 -- we expand the lable with basic letter entry and backspace letter removal
@@ -30,6 +30,7 @@ end
 
 textbox_panel:layout()
 
+lovr.graphics.setBackgroundColor(1,1,1)
 
 function lovr.textinput(char)
   textbox:textinput(char)
