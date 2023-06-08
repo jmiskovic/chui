@@ -104,7 +104,7 @@ for row = 1, #layout_text do
       btn = panel:button{ text=text, span=1, callback=textinputCB }
     end
     -- the btn.data is unused in chui lib, we're free to use it for virutal keyboard
-    btn.data = {text = btn.text, shift = shift}
+    btn.data = { text = btn.text, shift = shift }
   end
   if row < #layout_text then
     panel:row()

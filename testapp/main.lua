@@ -7,22 +7,22 @@ local pose = mat4()
   :scale(0.08)
 local panel = chui.panel()
 panel.pose:set(pose)
-panel:label{text='chui', span=4, text_scale=4}
-panel:spacer{span=3}
-panel:label{text='testing app', span=1}
+panel:label{ text='chui', span=4, text_scale=4 }
+panel:spacer{ span=3 }
+panel:label{ text='testing app', span=1 }
 panel:row()
 
 local led
-panel:button{text='PRESS', span=2, callback=function() led:set(not led:get()) end}
-led = panel:glow{text='GLOW', span=1}
-panel:label{text='|',span=0.4, text_scale=3}
-panel:button{text='cnt', span=2,
+panel:button{ text='PRESS', span=2, callback=function() led:set(not led:get()) end }
+led = panel:glow{text='GLOW', span=1, state=true }
+panel:label{ text='|',span=0.4, text_scale=3 }
+panel:button{ text='cnt', span=2,
   callback=function(btn)
     btn.cnt = (btn.cnt or 0) + 1
     btn.text = 'cnt ' .. btn.cnt
   end}
-panel:label{text='|',span=0.4, text_scale=3}
-panel:toggle{text='TGG', span=1}
+panel:label{ text='|',span=0.4, text_scale=3 }
+panel:toggle{ text='TGG', span=1 }
 panel:row()
 
 local progresses = {}
@@ -36,11 +36,11 @@ local function slideChange(widget, value)
   end
 end
 
-panel:slider{text='slide', span=3, callback=slideChange}
+panel:slider{ text='slide', span=3, callback=slideChange }
 for i = 1, 3 do
-  panel:label{text='>',span=0.2}
+  panel:label{ text='>',span=0.2 }
   table.insert(progresses,
-    panel:progress{text='hist' .. i, span=1})
+    panel:progress{ text='hist' .. i, span=1 })
 end
 
 panel:layout()

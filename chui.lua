@@ -75,7 +75,7 @@ end
 
 -- LABEL ----------------------------------------------------------------------
 m.label = {}
-m.label.defaults = {text = '', text_scale = 1}
+m.label.defaults = { text = '', text_scale = 1 }
 table.insert(m.widget_types, 'label')
 
 function m.label:init(options)
@@ -97,7 +97,7 @@ end
 
 -- BUTTON ---------------------------------------------------------------------
 m.button = {}
-m.button.defaults = {text = '', thickness = 0.3, callback = nil}
+m.button.defaults = { text = '', thickness = 0.3, callback = nil }
 table.insert(m.widget_types, 'button')
 
 function m.button:init(options)
@@ -160,7 +160,7 @@ end
 
 -- TOGGLE ---------------------------------------------------------------------
 m.toggle = {}
-m.toggle.defaults = {text = '', thickness = 0.3, state = false, callback = nil}
+m.toggle.defaults = { text = '', thickness = 0.3, state = false, callback = nil }
 table.insert(m.widget_types, 'toggle')
 
 function m.toggle:init(options)
@@ -230,7 +230,7 @@ end
 
 -- GLOW -------------------------------------------------------------------------
 m.glow = {}
-m.glow.defaults = {text = '', thickness = 0.1, state = false}
+m.glow.defaults = { text = '', thickness = 0.1, state = false }
 table.insert(m.widget_types, 'glow')
 
 function m.glow:init(options)
@@ -274,7 +274,7 @@ end
 
 -- PROGRESS ---------------------------------------------------------------------
 m.progress = {}
-m.progress.defaults = {text = '', value = 0}
+m.progress.defaults = { text = '', value = 0 }
 table.insert(m.widget_types, 'progress')
 
 function m.progress:init(options)
@@ -318,7 +318,7 @@ end
 -- SLIDER ---------------------------------------------------------------------
 m.slider = {}
 m.slider.__index = m.slider
-m.slider.defaults = {text = '', min = 0, max = 1, value = 0, step = nil, thickness = 0.15, callback = nil}
+m.slider.defaults = { text = '', min = 0, max = 1, value = 0, step = nil, thickness = 0.15, callback = nil }
 table.insert(m.widget_types, 'slider')
 
 local function roundBy(value, step)

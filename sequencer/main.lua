@@ -49,9 +49,9 @@ local pitch_sliders = {}
 
 for r, instrument in ipairs(instruments) do
   -- a trigger pushbutton to play the sample
-  sequencer_panel:button{span=0.3, callback=function() instrument.sample:clone():play() end}
+  sequencer_panel:button{ span=0.3, callback=function() instrument.sample:clone():play() end }
   -- sample name
-  sequencer_panel:label{text=instrument.name}
+  sequencer_panel:label{ text=instrument.name }
   -- volume and pitch parameters
   volume_sliders[r] = sequencer_panel:slider{ span=1.5, text='vol', min=0, max=1, value= instrument.volume }
   pitch_sliders[r] =  sequencer_panel:slider{ span=2, text='pitch', min=0.25, max=4, value= instrument.pitch }
@@ -66,8 +66,8 @@ for r, instrument in ipairs(instruments) do
 end
 
 -- tempo and bar progress spans are manually adjusted to be aligned with previous widgets
-local tempo_slider = sequencer_panel:slider{span=5.5, text='tempo', min=64, max=216, value=116, step=0.5}
-local progress_bar = sequencer_panel:progress{span=9.5, text='bar'}
+local tempo_slider = sequencer_panel:slider{ span=5.5, text='tempo', min=64, max=216, value=116, step=0.5 }
+local progress_bar = sequencer_panel:progress{ span=9.5, text='bar' }
 -- after adding the widgets, layout them in horizontally centered rows
 sequencer_panel:layout()
 
