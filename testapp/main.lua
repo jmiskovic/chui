@@ -70,12 +70,12 @@ function lovr.draw(pass)
     pass:setColor(1,1,1)
     pass:setMaterial(colorizer.texture)
     pass:setSampler('nearest')
-    pass:plane(1, 2, -2, 1, 1, 0, 0, 1)
+    pass:plane(0.5, 2.4, -1.5, 1, 1, 0, 0, 1)
     pass:setMaterial()
   end
   if colorizer.enabled then -- visualize currently edited color
     pass:setColor(colorizer.palette[colorizer.edited])
-    pass:sphere(0, 2, -2, 0.05)
+    pass:sphere(-0.5, 2.4, -1.5, 0.15)
   end
 end
 
