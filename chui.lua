@@ -6,9 +6,16 @@ local m = {}
 -- room for improvement O_o
 m.mouse_mode = false
 local mousearm
-if not lovr.headset or lovr.headset.getDriver() == 'desktop' then
-  mousearm = require 'mousearm' -- this library is a clutch, it simulates 3D mouse through the 'hand/left'
-  m.mouse_mode = true
+if lovr.headset.getDriver() == 'desktop' then
+  local status
+  -- this library is a clutch, it simulates 3D mouse through the 'hand/left'
+  status, mousearm = pcall(require, 'mousearm')
+  if status then
+    m.mouse_mode = true
+  else -- fallback to simulator's virtual hand
+    m.mouse_mode = false
+    mousearm = nil
+  end
 end
 
 
