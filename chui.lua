@@ -600,7 +600,8 @@ function m.drawPointers(pass, color)
   for i, hand in ipairs(lovr.headset.getHands()) do
     local skeleton = lovr.headset.getSkeleton(hand)
     if skeleton then
-      pass:sphere(mat4(unpack(skeleton[11])):scale(radius), segments, segments)
+      local x, y, z, _, angle, ax, ay, az = unpack(skeleton[11])
+      pass:sphere(mat4(x, y, z, angle, ax, ay, az):scale(radius), segments, segments)
     else
       pass:sphere(mat4(lovr.headset.getPosition(hand..'/point')):scale(radius), segments, segments)
     end
