@@ -25,16 +25,16 @@ m.palettes = {
   active = 1,
   -- some UI palettes collected here
 --  widget body     color for OFF        color for ON       highlight color   them letters     back-panel color
+  { cap = 0x46425e, inactive = 0xb28e7c, active = 0xdd9e43, hover = 0x72677b, text = 0xddc2bd, panel = 0x81828e },
+  { cap = 0x291d22, inactive = 0x4e313a, active = 0xf9b18e, hover = 0x9d5550, text = 0xfae8bc, panel = 0x374549 },
   { cap = 0x3b3149, inactive = 0x5c6181, active = 0xd47563, hover = 0xecc197, text = 0xecece0, panel = 0x191822 },
   { cap = 0x2a2a2b, inactive = 0x454a4d, active = 0x5a9470, hover = 0x2f7571, text = 0x81b071, panel = 0x202020 },
   { cap = 0xffeecc, inactive = 0x00b9be, active = 0xff6973, hover = 0xffb0a3, text = 0x15788c, panel = 0x264452 },
   { cap = 0x413a42, inactive = 0x1f1f29, active = 0xe68056, hover = 0x596070, text = 0xeaf0d8, panel = 0x16181b },
   { cap = 0x392b35, inactive = 0x7a9c96, active = 0xffab53, hover = 0x486b7f, text = 0xbb474f, panel = 0x5e747e },
   { cap = 0x100f13, inactive = 0x3a213a, active = 0x914e3c, hover = 0x693540, text = 0xc7955c, panel = 0x1a0d1e },
-  { cap = 0x291d22, inactive = 0x4e313a, active = 0xf9b18e, hover = 0x9d5550, text = 0xfae8bc, panel = 0x374549 },
   { cap = 0x212124, inactive = 0x464c54, active = 0x76add8, hover = 0x5b8087, text = 0xa3e7f0, panel = 0x2b3a49 },
   { cap = 0x2e3b43, inactive = 0x619094, active = 0xdcfdcb, hover = 0x5a9e89, text = 0x5fa6ac, panel = 0x9ac0ba },
-  { cap = 0x46425e, inactive = 0xb28e7c, active = 0xdd9e43, hover = 0x72677b, text = 0xddc2bd, panel = 0x81828e }
 }
 
 
@@ -430,7 +430,9 @@ function panel:row()
 end
 
 
-function panel:asGrid()
+function panel:layout(strategy)
+  strategy = strategy or 'vrows'
+  assert(strategy == 'vrows')
   local margin = 8 * Q -- margin between rows and widgets in row
   self.width = -math.huge
   self.height = #self.rows + (#self.rows - 1) * margin

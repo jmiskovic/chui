@@ -69,7 +69,7 @@ end
 local tempo_slider = sequencer_panel:slider{span=5.5, text='tempo', min=64, max=216, value=116, step=0.5}
 local progress_bar = sequencer_panel:progress{span=9.5, text='bar'}
 -- after adding the widgets, layout them in horizontally centered rows
-sequencer_panel:asGrid()
+sequencer_panel:layout()
 
 
 local last_step = 7

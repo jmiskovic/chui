@@ -1,7 +1,9 @@
 -- vqwerty: a panel with virtual keyboard; injects keys into lovr event queue
 local chui = require'chui'
 
-local panel = chui.panel()
+local panel = chui.panel{
+  palette = chui.palettes[9],
+}
 
 -- keyboard layout definition
 -- single-press special keys are in <>, long-hold special keys are in []
@@ -109,6 +111,6 @@ for row = 1, #layout_text do
   end
 end
 
-panel:asGrid()
+panel:layout()
 
 return panel

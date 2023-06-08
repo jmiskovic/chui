@@ -28,7 +28,7 @@ textbox.keypressed = function(self, key)
   end
 end
 
-textbox_panel:asGrid()
+textbox_panel:layout()
 
 
 function lovr.textinput(char)

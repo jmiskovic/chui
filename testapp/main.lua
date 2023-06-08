@@ -43,9 +43,11 @@ for i = 1, 3 do
     panel:progress{text='hist' .. i, span=1})
 end
 
-panel:asGrid()
+panel:layout()
 
--- when enabled with F1 the right mouse gestures change the HSL of selected color in edited palette
+-- colorizer can cycle through palettes and edit colors
+-- when enabled with F1 the right-mouse + gesture changes the HSL of selected color in palette
+-- horizontal gesture changes hue, one diagonal changes saturation while other modifies lightnes
 -- F2 cycles through predefined palettes, F3 selects which color in palette is currently edited
 -- when done editing, press F4 to print out your fancy new palette in the console
 local colorizer = require'colorizer'
