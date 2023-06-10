@@ -1,5 +1,3 @@
-local mouse = require'lovr-mouse'
-
 local NEAR_PLANE = 0.01
 
 local m = {}
@@ -36,7 +34,7 @@ end
 function m.getRay(distance)
   distance = distance or 1e3
   local ray = {}
-  local x, y = mouse.getPosition()
+  local x, y = lovr.system.getMousePosition()
   ray.origin = vec3(m.world_from_screen:mul(x, y, NEAR_PLANE / NEAR_PLANE))
   ray.target = vec3(m.world_from_screen:mul(x, y, NEAR_PLANE / distance))
   return ray
@@ -58,7 +56,7 @@ function lovr.headset.update()
   local dt = originals.update()
   -- update controller button states
   for button, mouse_button in pairs(m.mouse_from_button) do
-    local is_down = mouse.isDown(mouse_button)
+    local is_down = lovr.system.isMouseDown(mouse_button)
     m.button_pressed[button]  =     is_down and not m.button_down[button]
     m.button_released[button] = not is_down and     m.button_down[button]
     m.button_down[button] = is_down
@@ -70,7 +68,7 @@ function lovr.headset.update()
   m.world_from_screen:set(world_from_screen)
 
   -- calculate new hand pose
-  local mx, my = mouse.getPosition()
+  local mx, my = lovr.system.getMousePosition()
   local x, y, z = world_from_screen:mul(mx, my, NEAR_PLANE / m.distance)
   local dir = vec3(
       world_from_screen:mul(mx, my, NEAR_PLANE / (m.distance + 1))
@@ -163,20 +161,9 @@ function lovr.headset.wasReleased(device, button)
   return m.button_released[button]
 end
 
-
--- expose the lovr-mouse functions
-m.getScale = mouse.getScale
-m.getX = mouse.getX
-m.getY = mouse.getY
-m.getRawPosition = mouse.getPosition        -- renamed!
-m.setX = mouse.setX
-m.setY = mouse.setY
-m.setRawPosition = mouse.setPosition        -- renamed!
-m.isDown = mouse.isDown
-m.getRelativeMode = mouse.getRelativeMode
-m.setRelativeMode = mouse.setRelativeMode
-m.newCursor = mouse.newCursor
-m.getSystemCursor = mouse.getSystemCursor
-m.setCursor = mouse.setCursor
+-- expose LOVR mouse methods in mousearm
+m.getX = lovr.system.getMouseX
+m.getY = lovr.system.getMouseY
+m.isDown = lovr.system.isMouseDown
 
 return m
