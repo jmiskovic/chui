@@ -47,7 +47,7 @@ m.palettes = {
 
 function m.setFont(font) -- accepts path to file or loaded font instance
   if type(font) == 'string' then
-    local ok, res = pcall(lovr.graphics.newFont, path, 10)
+    local ok, res = pcall(lovr.graphics.newFont, font, 10)
     if ok then
       m.font = res
     end
