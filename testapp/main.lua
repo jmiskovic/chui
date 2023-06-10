@@ -1,3 +1,6 @@
+-- widgets test app and palette editor
+package.path = package.path .. ";../?.lua" -- needed for chui.lua to be located in parent directory
+
 local chui = require'chui'
 
 local pose = mat4()

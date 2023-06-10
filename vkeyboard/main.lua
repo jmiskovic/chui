@@ -1,4 +1,6 @@
 -- virtual keyboard is both a demo app for chui and a useable keyboard module
+package.path = package.path .. ";../?.lua" -- needed for chui.lua to be located in parent directory
+
 local chui = require'chui'
 
 local keyboard = require'vqwerty' -- pressed keys are received with lovr.textinput & lovr.keypressed

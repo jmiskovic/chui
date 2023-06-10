@@ -1,4 +1,5 @@
 -- a toy drum sequencer as demo app for chui UI framework
+package.path = package.path .. ";../?.lua" -- needed for chui.lua to be located in parent directory
 
 local chui = require'chui'
 

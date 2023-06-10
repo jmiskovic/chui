@@ -603,7 +603,7 @@ function m.drawPointers(pass, color)
       local x, y, z, _, angle, ax, ay, az = unpack(skeleton[11])
       pass:sphere(mat4(x, y, z, angle, ax, ay, az):scale(radius), segments, segments)
     else
-      pass:sphere(mat4(lovr.headset.getPosition(hand..'/point')):scale(radius), segments, segments)
+      pass:sphere(mat4(lovr.headset.getPosition(hand .. '/point')):scale(radius), segments, segments)
     end
   end
   pass:setColor(1,1,1)
