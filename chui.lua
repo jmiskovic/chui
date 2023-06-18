@@ -2,36 +2,22 @@
 
 local m = {}
 
--- this gui is VR-first, and the desktop mouse operation is only added for testing purposes
--- room for improvement O_o
-m.mouse_mode = false
-local mousearm
-if lovr.headset.getDriver() == 'desktop' then
-  local status
-  -- this library is a clutch, it simulates 3D mouse through the 'hand/left'
-  status, mousearm = pcall(require, 'mousearm')
-  if status then
-    m.mouse_mode = true
-  else -- fallback to simulator's virtual hand
-    m.mouse_mode = false
-    mousearm = nil
+function vibrate(...) -- or don't
+  if lovr.headset then
+    lovr.headset.vibrate(...)
   end
 end
 
-
 local Q = 0.025 -- quant; all paddings and margins are its multiples
 local S = 0.05  -- size of widget actuators
-
 local text_scale = 0.3
 local button_roundness = 0.3
 local slider_roundness = 0.1
-m.segments = 7
-m.panels = {}
 
 m.palettes = {
   active = 1,
   -- some UI palettes collected here
---  widget body     color for OFF        color for ON       highlight color   them letters     back-panel color
+  --widget body     color for OFF        color for ON       highlight color   them letters     back-panel color
   { cap = 0x46425e, inactive = 0xb28e7c, active = 0xdd9e43, hover = 0x72677b, text = 0xddc2bd, panel = 0x81828e },
   { cap = 0x291d22, inactive = 0x4e313a, active = 0xf9b18e, hover = 0x9d5550, text = 0xfae8bc, panel = 0x374549 },
   { cap = 0x3b3149, inactive = 0x5c6181, active = 0xd47563, hover = 0xecc197, text = 0xecece0, panel = 0x191822 },
@@ -44,23 +30,10 @@ m.palettes = {
   { cap = 0x2e3b43, inactive = 0x619094, active = 0xdcfdcb, hover = 0x5a9e89, text = 0x5fa6ac, panel = 0x9ac0ba },
 }
 
+m.mouse_available = (not lovr.headset) or (lovr.headset.getName() == 'Simulator')
+m.segments = 7  -- amount of geometry for roundrects and cylinders
 
-function m.setFont(font) -- accepts path to file or loaded font instance
-  if type(font) == 'string' then
-    local ok, res = pcall(lovr.graphics.newFont, font, 10)
-    if ok then
-      m.font = res
-    end
-  elseif font then
-    m.font = font
-  else
-    m.font = lovr.graphics.newFont(10)
-  end
-end
-
-m.setFont('RussoOne-Regular.ttf')
-
-
+m.panels = {}
 m.widget_types = {}
 
 -- SPACER ---------------------------------------------------------------------
@@ -147,7 +120,7 @@ function m.button:update(dt, pointer, handness)
   if handness and self.hovered and -- button passed the threshold
       depth_next < self.thickness / 2 and
       self.depth > self.thickness / 2 then
-    lovr.headset.vibrate(handness, 0.2, 0.1)
+    vibrate(handness, 0.2, 0.1)
     if self.callback then
       self.callback(self)
     end
@@ -211,7 +184,7 @@ function m.toggle:update(dt, pointer, handness)
   if handness and self.hovered and -- toggle button passed the threshold
       depth_next < self.thickness / 2 and
       self.depth > self.thickness / 2 then
-    lovr.headset.vibrate(handness, 0.2, 0.1)
+    vibrate(handness, 0.2, 0.1)
     self.state = not self.state
     if self.callback then
       self.callback(self, self.state)
@@ -291,10 +264,11 @@ end
 
 
 function m.progress:draw(pass)
-  -- value
+  -- value as horizontal bar
   local y = -0.15
   local aw = self.span - S - 2 * Q -- available width
   local w = self.value * aw
+  pass:setColor(self.panel.palette.text)
   pass:box(0, y, 2 * Q,  aw - 2 * Q, 2 * S, S / 2)
   pass:setColor(self.panel.palette.active)
   pass:roundrect(-aw / 2 + w / 2, y, 4 * Q,
@@ -356,6 +330,7 @@ function m.slider:draw(pass)
   local y = -0.15
   local aw = self.span - S - 2 * Q -- available width
   local pos = (self.value - self.min) / (self.max - self.min) * aw
+  pass:setColor(self.panel.palette.text)
   pass:box(0, y, 2 * Q,  aw, 2 * S, S / 2)
   pass:setColor(self.panel.palette.active)
   pass:roundrect(-aw / 2 + pos, y, 2 * Q + self.thickness / 2,
@@ -385,7 +360,7 @@ function m.slider:update(dt, pointer, handness)
     local aw = self.span - 16 * Q -- available width
     local value = self.min + (aw / 2 + pointer.x) / aw * (self.max - self.min)
     self:set(value)
-    lovr.headset.vibrate(handness, 0.2, dt)
+    vibrate(handness, 0.2, dt)
   end
   if not altered_next and self.altered and self.callback then
     self.callback(self, self.value)
@@ -420,7 +395,8 @@ function m.panel(options)
   options = options or {}
   local self = setmetatable({}, panel)
   self.frame = options.frame or panel_defaults.frame
-  self.pose = lovr.math.newMat4(options.pose) -- ok if nil
+  self.pose = lovr.math.newMat4(options.pose) -- ok if options.pose is nil
+  self.world_from_screen = Mat4()
   self.widgets = {}
   self.rows = {{}}
   self.width = 0
@@ -463,7 +439,7 @@ function panel:layout(strategy)
 end
 
 
-function panel:updatePointers(dt, pointers)
+function panel:updateWidgets(dt, pointers)
   if not self.visible then return end
   local z_front, z_back = 1.5, -0.3 -- z boundaries of widget AABB
   local panel_pose_inv = mat4(self.pose):rotate(math.pi, 0,1,0):invert()
@@ -481,7 +457,6 @@ function panel:updatePointers(dt, pointers)
         is_hovered = pos.x > -widget.span / 2 and pos.x < widget.span / 2 and
                      pos.y > -0.5 and pos.y < 0.5 and
                      pos.z < z_front and pos.z > z_back
-
         if is_hovered and math.abs(pos.z) < math.abs(closest_pos.z) then
           closest_pos:set(pos)
           closest_hand = pointer[1]
@@ -493,9 +468,7 @@ function panel:updatePointers(dt, pointers)
 end
 
 
-function panel:update(dt)
-  if not self.visible then return end
-  local pointers = {}
+function panel:getHeadsetPointers(pointers)
   for _, hand in ipairs(lovr.headset.getHands()) do
     local skeleton = lovr.headset.getSkeleton(hand)
     if skeleton then
@@ -504,35 +477,74 @@ function panel:update(dt)
       table.insert(pointers, {hand, vec3(lovr.headset.getPosition(hand .. '/point'))})
     end
   end
-  if m.mouse_mode then -- simulate hover and click actions
-    local scale = select(4, self.pose:unpack())
-    local pointer = pointers[1]
-    -- intersect the ray onto panel plane and see if it lands within panel
-    local ray = mousearm.getRay(1000)
-    ray.direction = (ray.target - ray.origin):normalize()
-    --local plane_direction = vec3(quat(self.pose):mul(quat(math.pi, 0,1,0)):direction())
-    local plane_direction = vec3(quat(self.pose):direction())
-    --plane_direction.y = -plane_direction.y
-    local dot = ray.direction:dot(plane_direction)
-    if math.abs(dot) > 1e-5 then
-      local plane_pos = vec3(self.pose)
-      local ray_length = (plane_pos - ray.origin):dot(plane_direction) / dot
-      local hit_spot = ray.origin + ray.direction * ray_length
-      local pointer_position = pointer[2]
-      if lovr.headset.isDown('hand/left', 'trigger') then
-        pointer_position:set(hit_spot + plane_direction * -(0.2 * scale))
-      else
-        pointer_position:set(hit_spot + plane_direction * (0.3 * scale))
-      end
-    end
-  end
-  -- TODO: panel aabb check
-  self:updatePointers(dt, pointers)
 end
 
 
-function panel:draw(pass)
+function panel:getMousePointer(pointers, click_offset)
+  local scale = select(4, self.pose:unpack())
+  -- overwrite hand/left in desktop VR sim, or make a new pointer for 3d desktop
+  pointers[1] = pointers[1] or {'mouse', vec3()}
+  -- make a ray in 3D space extending from underneath the mouse cursor to -Z
+  local x, y = lovr.system.getMousePosition()
+  local ray_origin = vec3(self.world_from_screen:mul(x, y, 1))
+  local ray_target = vec3(self.world_from_screen:mul(x, y, 0.001))
+  local ray_direction = (ray_target - ray_origin):normalize()
+  -- intersect the ray onto panel plane and see if it lands within panel
+  local plane_direction = vec3(quat(self.pose):direction())
+  local dot = ray_direction:dot(plane_direction)
+  if math.abs(dot) > 1e-5 then
+    local plane_pos = vec3(self.pose)
+    local ray_length = (plane_pos - ray_origin):dot(plane_direction) / dot
+    local hit_spot = ray_origin + ray_direction * ray_length
+    if click_offset then
+      if lovr.system.isMouseDown(2) then
+        pointers[1][2]:set(hit_spot + plane_direction * -(0.2 * scale))
+      else
+        pointers[1][2]:set(hit_spot + plane_direction * (0.2 * scale))
+      end
+    else
+      pointers[1][2]:set(hit_spot)
+    end
+  end
+end
+
+
+function panel:getPointers(click_offset)
+  local pointers = {}
+  if lovr.headset then
+    self:getHeadsetPointers(pointers)
+  end
+  if m.mouse_available then
+    self:getMousePointer(pointers, click_offset)
+  end
+  return pointers
+end
+
+
+function panel:getScreenToWorldTransform(pass)
+  local w, h = pass:getDimensions()
+  local clip_from_screen = mat4(-1, -1, 0):scale(2 / w, 2 / h, 1)
+  local view_pose = mat4(pass:getViewPose(1))
+  local view_proj = pass:getProjection(1, mat4())
+  -- m.is_orthographic = view_proj[16] == 1
+  local world_from_screen = view_pose:mul(view_proj:invert()):mul(clip_from_screen)
+  self.world_from_screen:set(world_from_screen)
+end
+
+
+function panel:update(dt)
   if not self.visible then return end
+  local pointers = self:getPointers(true)
+  -- TODO: skip update if outside the panel's AABB
+  self:updateWidgets(dt, pointers)
+end
+
+
+function panel:draw(pass, draw_pointers)
+  if not self.visible then return end
+  if m.mouse_available then
+    self:getScreenToWorldTransform(pass)
+  end
   pass:push()
   pass:transform(self.pose)
   pass:rotate(math.pi, 0,1,0)
@@ -550,6 +562,14 @@ function panel:draw(pass)
     pass:pop()
   end
   pass:pop()
+  if draw_pointers then
+    local pointers = pointers or self:getPointers()
+    pass:setColor(color or 0x404040)
+    local radius = 0.005
+    for i, pointer in ipairs(pointers) do
+      pass:sphere(mat4(pointer[2]):scale(radius), m.segments, m.segments)
+    end
+  end
 end
 
 
@@ -590,26 +610,25 @@ end
 initPanelWidgets()
 
 
--------------------------------------------------------------------------------
+-- CHUI HELPERS ---------------------------------------------------------------
 
-
-function m.drawPointers(pass, color)
-  pass:setColor(color or 0x404040)
-  local radius = 0.005
-  local segments = 7
-  for i, hand in ipairs(lovr.headset.getHands()) do
-    local skeleton = lovr.headset.getSkeleton(hand)
-    if skeleton then
-      local x, y, z, _, angle, ax, ay, az = unpack(skeleton[11])
-      pass:sphere(mat4(x, y, z, angle, ax, ay, az):scale(radius), segments, segments)
+function m.setFont(font) -- accepts path to file or loaded font instance
+  if type(font) == 'string' then -- path to font file
+    local ok, res = pcall(lovr.graphics.newFont, font, 10)
+    if ok then
+      m.font = res
     else
-      pass:sphere(mat4(lovr.headset.getPosition(hand .. '/point')):scale(radius), segments, segments)
+      print('could not load \'' .. font .. '\', defaulting to built-in Varela Round')
+      m.font = lovr.graphics.newFont(10)
     end
+  elseif tostring(font) == 'Font' then -- a font instance used as-is
+    m.font = font
+  else
+    m.font = lovr.graphics.newFont(10)
   end
-  pass:setColor(1,1,1)
-  pass:setColor(1,0,0)
 end
 
+m.setFont('RussoOne-Regular.ttf')
 
 -- convenience functions for multiple panels, user can also just call :update & :draw on the panel
 
@@ -620,9 +639,9 @@ function m.update(dt) -- neccessary for UI interactions
 end
 
 
-function m.draw(pass)
+function m.draw(pass, draw_pointers)
   for _, panel in ipairs(m.panels) do
-      panel:draw(pass)
+      panel:draw(pass, draw_pointers)
   end
 end
 

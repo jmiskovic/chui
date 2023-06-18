@@ -50,6 +50,5 @@ end
 
 
 function lovr.draw(pass)
-  chui.draw(pass) -- draw all collected panels
-  chui.drawPointers(pass)
+  chui.draw(pass, true) -- draw all collected panels, as well as interaction pointer
 end

@@ -103,6 +103,5 @@ end
 
 
 function lovr.draw(pass)
-  sequencer_panel:draw(pass)
-  chui.drawPointers(pass) -- optional for desktop usage
+  sequencer_panel:draw(pass, true) -- draw panel itself and the interacting pointer
 end

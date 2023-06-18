@@ -67,8 +67,7 @@ lovr.graphics.setBackgroundColor(1,1,1)
 
 function lovr.draw(pass)
   pass:setWireframe(lovr.system.isKeyDown('tab')) --  x-vision
-  chui.draw(pass)
-  chui.drawPointers(pass)
+  chui.draw(pass, true)
   if colorizer.texture then -- show a baked texture created from palette
     pass:setColor(1,1,1)
     pass:setMaterial(colorizer.texture)
