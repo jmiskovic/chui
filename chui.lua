@@ -408,6 +408,14 @@ function m.panel(options)
 end
 
 
+function panel:reset()
+  self.widgets = {}
+  self.rows = {{}}
+  self.width = 0
+  self.height = 0
+end
+
+
 function panel:row()
   table.insert(self.rows, {})
 end
@@ -421,12 +429,12 @@ function panel:layout(strategy)
   self.height = #self.rows + (#self.rows - 1) * margin
   for r, row in ipairs(self.rows) do
     local total_span = 0
-    for c, widget in ipairs(row) do
+    for _, widget in ipairs(row) do
       total_span = total_span + widget.span
     end
     local width = total_span + (#row - 1) * margin
     local x = -width / 2
-    for c, widget in ipairs(row) do
+    for _, widget in ipairs(row) do
       x = x + widget.span / 2
       local y = self.height / 2    -- vertical top of panel
         - (r - 1) * (1 + margin)   -- each row after first one needs 1 + margin
@@ -566,7 +574,7 @@ function panel:draw(pass, draw_pointers)
     local pointers = pointers or self:getPointers()
     pass:setColor(color or 0x404040)
     local radius = 0.005
-    for i, pointer in ipairs(pointers) do
+    for _, pointer in ipairs(pointers) do
       pass:sphere(mat4(pointer[2]):scale(radius), m.segments, m.segments)
     end
   end
@@ -641,6 +649,11 @@ function m.draw(pass, draw_pointers)
   for _, panel in ipairs(m.panels) do
       panel:draw(pass, draw_pointers)
   end
+end
+
+
+function m.reset() -- forget the collected panels
+  m.panels = {}
 end
 
 return m
