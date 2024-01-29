@@ -594,28 +594,32 @@ end
 
 
 -- creates panel methods for constructing widgets with light OOP based on metatables
-local function initPanelWidgets()
-  for _, widget_name in ipairs(m.widget_types) do
-    local widget_proto = m[widget_name]
-    widget_proto.__index = widget_proto
-    -- panel.button{text = 'click me'} should make the button and add it to panel
-    panel[widget_name] = function(self, options)
-      options = options or {}
-      local widget_proto = m[widget_name]
-      setmetatable(options, widget_proto.defaults)
-      widget_proto.defaults.__index = widget_proto.defaults
-      local widget = setmetatable({}, widget_proto)
-      widget:init(options)
-      widget.span = options.span or 1
-      widget.panel = self
-      table.insert(self.widgets, widget)
-      table.insert(self.rows[#self.rows], widget)
-      return widget
-    end
+function m.initWidgetType(widget_name, widget_proto)
+  widget_proto.__index = widget_proto
+  -- panel.button{text = 'click me'} should make the button and add it to panel
+  panel[widget_name] = function(self, options)
+    options = options or {}
+    setmetatable(options, widget_proto.defaults)
+    widget_proto.defaults.__index = widget_proto.defaults
+    local widget = setmetatable({}, widget_proto)
+    widget:init(options)
+    widget.span = options.span or 1
+    widget.panel = self
+    table.insert(self.widgets, widget)
+    table.insert(self.rows[#self.rows], widget)
+    return widget
   end
 end
 
-initPanelWidgets()
+
+local function initAllWidgets()
+  for _, widget_name in ipairs(m.widget_types) do
+    local widget_proto = m[widget_name]
+    m.initWidgetType(widget_name, widget_proto)
+  end
+end
+
+initAllWidgets()
 
 
 -- CHUI HELPERS ---------------------------------------------------------------
