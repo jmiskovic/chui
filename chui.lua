@@ -2,9 +2,9 @@
 
 local m = {}
 
-function vibrate(...) -- or don't
-  if lovr.headset then
-    lovr.headset.vibrate(...)
+function vibrate(device, strength, duration, frequency)
+  if device ~= 'mouse' and lovr.headset then
+    lovr.headset.vibrate(device, strength, duration, frequency)
   end
 end
 
