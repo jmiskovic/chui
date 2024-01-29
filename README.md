@@ -103,11 +103,6 @@ The library has few widgets, with listed parameters and their defaults:
   `{ text = '', min = 0, max = 1, value = 0, step = nil, thickness = 0.15, callback = nil, span = 1 }`
 
 
-## Dependencies
-
-`chui` uses cutting-edge lovr features (`roundrect`!) which currently only exist on the `dev`
-branch. There are available build artifacts in lovr's Github Actions section.
-
 ## Demos & utilities
 
 ##### testapp
