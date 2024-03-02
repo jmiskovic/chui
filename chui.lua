@@ -127,7 +127,7 @@ function m.button:update(dt, pointer, handness)
   end
   self.depth = depth_next
   self.hovered = handness and true or false
-  if not handness then -- rebound
+  if not handness then -- slowly rebound to above-hover depth when pointer leaves the widget
     self.depth = math.min(self.thickness, self.depth + 4 * dt)
   end
 end
@@ -157,19 +157,19 @@ end
 function m.toggle:draw(pass)
   -- body
   pass:setColor(
-    (self.hovered and self.panel.palette.hover) or
     (self.state and self.panel.palette.active) or
+    (self.hovered and self.panel.palette.hover) or
     self.panel.palette.cap)
   pass:roundrect(0, 0, self.depth / 2,
     self.span - 2 * Q, 1 - 2 * Q, self.depth - Q,
     0, 0,1,0,
-    button_roundness, m.segments)
+    button_roundness * 0.75, m.segments)
   -- frame
   pass:setColor(self.panel.palette.inactive)
   pass:roundrect(0, 0, Q / 2,
     self.span, 1, Q,
     0, 0,1,0,
-    button_roundness, m.segments)
+    button_roundness * 0.75, m.segments)
   -- text
   pass:setColor(self.panel.palette.text)
   pass:text(self.text, 0, 0, self.depth + Q,  text_scale)
@@ -299,7 +299,8 @@ end
 -- SLIDER ---------------------------------------------------------------------
 m.slider = {}
 m.slider.__index = m.slider
-m.slider.defaults = { text = '', min = 0, max = 1, value = 0, step = nil, thickness = 0.15, callback = nil }
+m.slider.defaults = { text = '',  format = '%s %.2f',
+  min = 0, max = 1, value = 0, step = nil, thickness = 0.15, callback = nil }
 table.insert(m.widget_types, 'slider')
 
 local function roundBy(value, step)
@@ -316,8 +317,8 @@ function m.slider:init(options)
   self.thickness = options.thickness
   self.callback = options.callback
   self.step = options.step
-  self.format = '%s %.2f'
-  if self.step then
+  self.format = options.format
+  if not options.format and self.step then
     local digits = math.max(0, math.ceil(-math.log(self.step, 10)))
     self.format = string.format('%%s %%.%df', digits)
   end
