@@ -5,8 +5,7 @@ local chui = require'chui'
 
 local pose = mat4()
   :translate(0, 1.6, -0.5)
-  :rotate(math.pi, 0,1,0)
-  :rotate(0.2, 1,0,0)
+  :rotate(-0.2, 1,0,0)
   :scale(0.08)
 local panel = chui.panel()
 panel.pose:set(pose)

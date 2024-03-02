@@ -4,20 +4,15 @@ package.path = package.path .. ";../?.lua" -- needed for chui.lua to be located 
 local chui = require'chui'
 
 local keyboard = require'vqwerty' -- pressed keys are received with lovr.textinput & lovr.keypressed
-keyboard.pose:set(
-  mat4()
-    :target(vec3(0, 1.6, -0.35), vec3(0, 2, 0))
-    :scale(0.03))
+keyboard.pose:set(mat4(0, 1.6, -0.35):scale(0.03))
+
 
 -- chui lib doesn't have a rich input field, only the label widget
 -- we expand the lable with basic letter entry and backspace letter removal
 -- minimal text interactions, edit cursor fixed to the end
 
 local textbox_panel = chui.panel()
-textbox_panel.pose:set(
-  mat4()
-    :target(vec3(0, 2, -2), vec3(0, 2, 0))
-    :scale(0.6))
+textbox_panel.pose:set(mat4(0, 2, -2):scale(0.6))
 local textbox = textbox_panel:label{ span=4 } -- centered text
 
 textbox.textinput = function(self, char)

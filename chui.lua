@@ -462,6 +462,7 @@ function panel:updateWidgets(dt, pointers)
         local is_hovered = false
         -- reproject pointer onto panel coordinate system and check widget's AABB
         local pos_panel = panel_pose_inv:mul(vec3(pointer[2]))
+        pos_panel.x = -pos_panel.x
         local pos = mat4(widget.pose):invert():mul(pos_panel) -- in panel's coordinate system
         is_hovered = pos.x > -widget.span / 2 and pos.x < widget.span / 2 and
                      pos.y > -0.5 and pos.y < 0.5 and
@@ -492,7 +493,7 @@ end
 function panel:getMousePointer(pointers, click_offset)
   local scale = select(4, self.pose:unpack())
   -- overwrite hand/left in desktop VR sim, or make a new pointer for 3d desktop
-  pointers[1] = pointers[1] or {'mouse', vec3()}
+  local mouse_pointer = pointers[1] or {'mouse', vec3()}
   -- make a ray in 3D space extending from underneath the mouse cursor to -Z
   local x, y = lovr.system.getMousePosition()
   local ray_origin = vec3(self.world_from_screen:mul(x, y, 1))
@@ -507,14 +508,15 @@ function panel:getMousePointer(pointers, click_offset)
     local hit_spot = ray_origin + ray_direction * ray_length
     if click_offset then
       if lovr.system.isMouseDown(2) then
-        pointers[1][2]:set(hit_spot + plane_direction * -(0.2 * scale))
+        mouse_pointer[2]:set(hit_spot + plane_direction * -(0.2 * scale))
       else
-        pointers[1][2]:set(hit_spot + plane_direction * (0.2 * scale))
+        mouse_pointer[2]:set(hit_spot + plane_direction * (0.2 * scale))
       end
     else
-      pointers[1][2]:set(hit_spot)
+      mouse_pointer[2]:set(hit_spot)
     end
   end
+  pointers[1] = mouse_pointer
 end
 
 
@@ -556,7 +558,6 @@ function panel:draw(pass, draw_pointers)
   end
   pass:push()
   pass:transform(self.pose)
-  pass:rotate(math.pi, 0,1,0)
   if self.frame == 'backpanel' then
     pass:setColor(self.palette.panel)
     pass:roundrect(0, 0, -Q / 2,
@@ -572,9 +573,9 @@ function panel:draw(pass, draw_pointers)
   end
   pass:pop()
   if draw_pointers then
-    local pointers = pointers or self:getPointers()
+    local pointers = pointers or self:getPointers(false)
     pass:setColor(color or 0x404040)
-    local radius = 0.005
+    local radius = 0.01
     for _, pointer in ipairs(pointers) do
       pass:sphere(mat4(pointer[2]):scale(radius), m.segments, m.segments)
     end

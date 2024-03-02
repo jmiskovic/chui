@@ -20,7 +20,6 @@ for _, instrument in ipairs(instruments) do
 end
 
 
--- best use a sparse grid for sequencer triggers
 local function defaultdict(default_value_factory)
     local t = {}
     local metatable = {}
@@ -39,11 +38,7 @@ local seq_table = defaultdict(function() return {} end)
 
 local sequencer_panel = chui.panel{
   palette = chui.palettes[6],
-  pose=mat4()
-    :translate(0, 1.65, -0.3)
-    :rotate(math.pi, 0,1,0)
-    :rotate(0.2, 1,0,0)
-    :scale(0.04)
+  pose=mat4(0, 1.65, -0.3):scale(0.04)
   }
 local volume_sliders = {}
 local pitch_sliders = {}
