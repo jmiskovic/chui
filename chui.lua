@@ -97,18 +97,18 @@ function m.button:draw(pass)
     (self.hovered and self.panel.palette.hover) or
     self.panel.palette.cap)
   pass:roundrect(0, 0, self.depth / 2,
-    self.span - 2 * Q, 1 - 2 * Q, self.depth - Q,
+    self.span[1] - 2 * Q, self.span[2] - 2 * Q, self.depth - Q,
     0, 0,1,0,
     button_roundness, m.segments)
   -- frame
   pass:setColor(self.panel.palette.inactive)
   pass:roundrect(0, 0, Q / 2,
-    self.span, 1, Q,
+    self.span[1], self.span[2], Q,
     0, 0,1,0,
     button_roundness, m.segments)
   -- text
   pass:setColor(self.panel.palette.text)
-  pass:text(self.text, 0, 0, self.depth + Q,  text_scale)
+  pass:text(self.text, 0, 0, self.depth + Q, text_scale * self.span[2])
 end
 
 
@@ -161,18 +161,18 @@ function m.toggle:draw(pass)
     (self.hovered and self.panel.palette.hover) or
     self.panel.palette.cap)
   pass:roundrect(0, 0, self.depth / 2,
-    self.span - 2 * Q, 1 - 2 * Q, self.depth - Q,
+    self.span[1] - 2 * Q, self.span[2] - 2 * Q, self.depth - Q,
     0, 0,1,0,
     button_roundness * 0.75, m.segments)
   -- frame
   pass:setColor(self.panel.palette.inactive)
   pass:roundrect(0, 0, Q / 2,
-    self.span, 1, Q,
+    self.span[1], self.span[2], Q,
     0, 0,1,0,
     button_roundness * 0.75, m.segments)
   -- text
   pass:setColor(self.panel.palette.text)
-  pass:text(self.text, 0, 0, self.depth + Q,  text_scale)
+  pass:text(self.text, 0, 0, self.depth + Q, text_scale * self.span[2])
 end
 
 
@@ -266,7 +266,7 @@ end
 function m.progress:draw(pass)
   -- value as horizontal bar
   local y = -0.15
-  local aw = self.span - S - 2 * Q -- available width
+  local aw = self.span[1] - S - 2 * Q -- available width
   local w = self.value * aw
   pass:setColor(self.panel.palette.text)
   pass:box(0, y, 2 * Q,  aw - 2 * Q, 2 * S, S / 2)
@@ -329,7 +329,7 @@ end
 function m.slider:draw(pass)
   -- value knob
   local y = -0.15
-  local aw = self.span - S - 2 * Q -- available width
+  local aw = self.span[1] - S - 2 * Q -- available width
   local pos = (self.value - self.min) / (self.max - self.min) * aw
   pass:setColor(self.panel.palette.text)
   pass:box(0, y, 2 * Q,  aw, 2 * S, S / 2)
@@ -343,7 +343,7 @@ function m.slider:draw(pass)
     (self.altered and self.panel.palette.hover) or
     self.panel.palette.cap)
   pass:roundrect(0, 0, Q / 2,
-    self.span, 1, Q,
+    self.span[1], 1, Q,
     0, 0,1,0,
     slider_roundness, m.segments)
   -- text
@@ -358,7 +358,7 @@ function m.slider:update(dt, pointer, handness)
   local hovered = handness and true or false
   local altered_next = pointer.z < self.thickness
   if hovered and altered_next then
-    local aw = self.span - 16 * Q -- available width
+    local aw = self.span[1] - 16 * Q -- available width
     local value = self.min + (aw / 2 + pointer.x) / aw * (self.max - self.min)
     self:set(value)
     vibrate(handness, 0.2, dt)
@@ -424,25 +424,36 @@ end
 
 function panel:layout(strategy)
   strategy = strategy or 'vrows'
-  assert(strategy == 'vrows')
+  assert(strategy == 'vrows', "layout strategy not supported")
   local margin = 8 * Q -- margin between rows and widgets in row
   self.width = -math.huge
-  self.height = #self.rows + (#self.rows - 1) * margin
+  self.height = 0
+  -- calculate total height
+  for r, row in ipairs(self.rows) do
+    local max_height = 0
+    for _, widget in ipairs(row) do
+      max_height = math.max(max_height, widget.span[2])
+    end
+    self.height = self.height + max_height + margin
+  end
+  -- lay out widgets
+  local current_y = self.height / 2
   for r, row in ipairs(self.rows) do
     local total_span = 0
+    local max_height = 0
     for _, widget in ipairs(row) do
-      total_span = total_span + widget.span
+      total_span = total_span + widget.span[1]
+      max_height = math.max(max_height, widget.span[2])
     end
     local width = total_span + (#row - 1) * margin
     local x = -width / 2
     for _, widget in ipairs(row) do
-      x = x + widget.span / 2
-      local y = self.height / 2    -- vertical top of panel
-        - (r - 1) * (1 + margin)   -- each row after first one needs 1 + margin
-        - 0.5                      -- the center of row is at half its height
+      x = x + widget.span[1] / 2
+      local y = current_y - max_height / 2
       widget.pose = lovr.math.newMat4(x, y, 0)
-      x = x + widget.span / 2 + margin
+      x = x + widget.span[1] / 2 + margin
     end
+    current_y = current_y - max_height - margin
     self.width = math.max(self.width, width)
   end
 end
@@ -464,8 +475,8 @@ function panel:updateWidgets(dt, pointers)
         local pos_panel = panel_pose_inv:mul(vec3(pointer[2]))
         pos_panel.x = -pos_panel.x
         local pos = mat4(widget.pose):invert():mul(pos_panel) -- in panel's coordinate system
-        is_hovered = pos.x > -widget.span / 2 and pos.x < widget.span / 2 and
-                     pos.y > -0.5 and pos.y < 0.5 and
+        is_hovered = pos.x > -widget.span[1] / 2 and pos.x < widget.span[1] / 2 and
+                     pos.y > -widget.span[2] / 2 and pos.y < widget.span[2] / 2 and
                      pos.z < z_front and pos.z > z_back
         if is_hovered and math.abs(pos.z) < math.abs(closest_pos.z) then
           closest_pos:set(pos)
@@ -604,8 +615,16 @@ function m.initWidgetType(widget_name, widget_proto)
     setmetatable(options, widget_proto.defaults)
     widget_proto.defaults.__index = widget_proto.defaults
     local widget = setmetatable({}, widget_proto)
+    if type(options.span) == 'number' then
+      widget.span = {options.span, 1}
+    elseif type(options.span) == 'table' and #options.span == 2 then
+      widget.span = {options.span[1], options.span[2]}
+    elseif not options.span then
+      widget.span = {1, 1}
+    else
+      assert(false, "unsupported widget span value")
+    end
     widget:init(options)
-    widget.span = options.span or 1
     widget.panel = self
     table.insert(self.widgets, widget)
     table.insert(self.rows[#self.rows], widget)
@@ -646,14 +665,18 @@ end
 
 function m.update(dt) -- neccessary for UI interactions
   for _, panel in ipairs(m.panels) do
+    if not panel.parent then
       panel:update(dt)
+    end
   end
 end
 
 
 function m.draw(pass, draw_pointers)
   for _, panel in ipairs(m.panels) do
+    if not panel.parent then
       panel:draw(pass, draw_pointers)
+    end
   end
 end
 
