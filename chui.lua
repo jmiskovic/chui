@@ -606,6 +606,12 @@ function panel:setVisible(is_visible)
 end
 
 
+function panel:appendWidget(widget)
+  table.insert(self.widgets, widget)
+  table.insert(self.rows[#self.rows], widget)
+end
+
+
 -- creates panel methods for constructing widgets with light OOP based on metatables
 function m.initWidgetType(widget_name, widget_proto)
   widget_proto.__index = widget_proto
@@ -626,8 +632,7 @@ function m.initWidgetType(widget_name, widget_proto)
     end
     widget:init(options)
     widget.panel = self
-    table.insert(self.widgets, widget)
-    table.insert(self.rows[#self.rows], widget)
+    self:appendWidget(widget)
     return widget
   end
 end
