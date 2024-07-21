@@ -395,13 +395,13 @@ local panel_defaults = {
 function m.panel(options)
   options = options or {}
   local self = setmetatable({}, panel)
+  self.is_panel = true
   self.frame = options.frame or panel_defaults.frame
-  self.pose = lovr.math.newMat4(options.pose) -- ok if options.pose is nil
+  self.pose = Mat4(options.pose) -- ok if options.pose is nil
   self.world_from_screen = Mat4()
   self.widgets = {}
   self.rows = {{}}
-  self.width = 0
-  self.height = 0
+  self.span = {1, 1}
   self.palette = options.palette or m.palettes[m.palettes.active] or panel_defaults.palette
   self.visible = true
   table.insert(m.panels, self)
@@ -412,8 +412,6 @@ end
 function panel:reset()
   self.widgets = {}
   self.rows = {{}}
-  self.width = 0
-  self.height = 0
 end
 
 
@@ -422,39 +420,59 @@ function panel:row()
 end
 
 
+function panel:nest(child_panel)
+  assert(child_panel)
+  child_panel.parent = self
+  self:appendWidget(child_panel)
+end
+
+
+local function scaledSpan(widget)
+  local scale = 1
+  if widget.is_panel then
+    scale = select(4, widget.pose:unpack())
+  end
+  return widget.span[1] * scale, widget.span[2] * scale
+end
+
+
+-- set poses of contained widgets and calculate own span
 function panel:layout(strategy)
   strategy = strategy or 'vrows'
-  assert(strategy == 'vrows', "layout strategy not supported")
   local margin = 8 * Q -- margin between rows and widgets in row
-  self.width = -math.huge
-  self.height = 0
+  self.span[1] = -math.huge
+  self.span[2] = 0
   -- calculate total height
   for r, row in ipairs(self.rows) do
     local max_height = 0
     for _, widget in ipairs(row) do
-      max_height = math.max(max_height, widget.span[2])
+      local hspan, vspan = scaledSpan(widget)
+      max_height = math.max(max_height, vspan)
     end
-    self.height = self.height + max_height + margin
+    self.span[2] = self.span[2] + max_height + (r < #self.rows and margin or 0)
   end
   -- lay out widgets
-  local current_y = self.height / 2
+  local current_y = self.span[2] / 2
   for r, row in ipairs(self.rows) do
     local total_span = 0
     local max_height = 0
     for _, widget in ipairs(row) do
-      total_span = total_span + widget.span[1]
-      max_height = math.max(max_height, widget.span[2])
+      local hspan, vspan = scaledSpan(widget)
+      total_span = total_span + hspan
+      max_height = math.max(max_height, vspan)
     end
     local width = total_span + (#row - 1) * margin
     local x = -width / 2
     for _, widget in ipairs(row) do
-      x = x + widget.span[1] / 2
+      local hspan, vspan = scaledSpan(widget)
+      x = x + hspan / 2
       local y = current_y - max_height / 2
-      widget.pose = lovr.math.newMat4(x, y, 0)
-      x = x + widget.span[1] / 2 + margin
+      local scale = widget.is_panel and select(4, widget.pose:unpack()) or 1
+      widget.pose = Mat4(x, y, 0):scale(scale)
+      x = x + hspan / 2 + margin
     end
     current_y = current_y - max_height - margin
-    self.width = math.max(self.width, width)
+    self.span[1] = math.max(self.span[1], width)
   end
 end
 
@@ -462,7 +480,7 @@ end
 function panel:updateWidgets(dt, pointers)
   if not self.visible then return end
   local z_front, z_back = 1.5, -0.3 -- z boundaries of widget AABB
-  local panel_pose_inv = mat4(self.pose):rotate(math.pi, 0,1,0):invert()
+  local panel_pose_inv = self:getWorldPose():rotate(math.pi, 0,1,0):invert()
   for _, widget in ipairs(self.widgets) do
     local closest_pos
     local closest_hand
@@ -502,7 +520,9 @@ end
 
 
 function panel:getMousePointer(pointers, click_offset)
-  local scale = select(4, self.pose:unpack())
+  -- flatten pose with parent poses
+  local pose = self:getWorldPose()
+  local scale = select(4, pose:unpack())
   -- overwrite hand/left in desktop VR sim, or make a new pointer for 3d desktop
   local mouse_pointer = pointers[1] or {'mouse', vec3()}
   -- make a ray in 3D space extending from underneath the mouse cursor to -Z
@@ -511,10 +531,10 @@ function panel:getMousePointer(pointers, click_offset)
   local ray_target = vec3(self.world_from_screen:mul(x, y, 0.001))
   local ray_direction = (ray_target - ray_origin):normalize()
   -- intersect the ray onto panel plane and see if it lands within panel
-  local plane_direction = vec3(quat(self.pose):direction())
+  local plane_direction = quat(pose):direction()
   local dot = ray_direction:dot(plane_direction)
   if math.abs(dot) > 1e-5 then
-    local plane_pos = vec3(self.pose)
+    local plane_pos = vec3(pose)
     local ray_length = (plane_pos - ray_origin):dot(plane_direction) / dot
     local hit_spot = ray_origin + ray_direction * ray_length
     if click_offset then
@@ -554,6 +574,18 @@ function panel:getScreenToWorldTransform(pass)
 end
 
 
+function panel:getWorldPose()
+  -- for nested panels collect all transforms up to (parentless) root
+  local stacked_pose = mat4(self.pose)
+  local parent = self.parent
+  while parent do
+    stacked_pose = parent.pose * stacked_pose
+    parent = parent.parent
+  end
+  return stacked_pose
+end
+
+
 function panel:update(dt)
   if not self.visible then return end
   local pointers = self:getPointers(true)
@@ -568,11 +600,16 @@ function panel:draw(pass, draw_pointers)
     self:getScreenToWorldTransform(pass)
   end
   pass:push()
-  pass:transform(self.pose)
+  if not self.parent then
+    pass:transform(self.pose)
+  else
+    pass:transform(0, 0, Q)
+  end
+  pass:setColor(0.820, 0.816, 0.808)
   if self.frame == 'backpanel' then
     pass:setColor(self.palette.panel)
     pass:roundrect(0, 0, -Q / 2,
-      self.width + 0.5, self.height + 0.5, Q ,
+      self.span[1] + 0.5, self.span[2] + 0.5, Q ,
       0, 0,1,0, 0.4)
   end
   pass:setFont(m.font)
