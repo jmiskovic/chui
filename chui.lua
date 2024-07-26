@@ -14,20 +14,25 @@ local text_scale = 0.3
 local button_roundness = 0.3
 local slider_roundness = 0.1
 
-m.palettes = {
-  active = 1,
-  -- some UI palettes collected here
+m.palettes = { -- a built-in collection of UI color palettes
   --widget body     color for OFF        color for ON       highlight color   them letters     back-panel color
-  { cap = 0x46425e, inactive = 0xb28e7c, active = 0xdd9e43, hover = 0x72677b, text = 0xddc2bd, panel = 0x81828e },
-  { cap = 0x291d22, inactive = 0x4e313a, active = 0xf9b18e, hover = 0x9d5550, text = 0xfae8bc, panel = 0x374549 },
+  { cap = 0xf0f0fb, inactive = 0xa2a6c1, active = 0xa479c7, hover = 0xb9aecd, text = 0x41486c, panel = 0xf6f7fe },
+  { cap = 0x291d22, inactive = 0x3b3235, active = 0xf9b18e, hover = 0x9d5550, text = 0xfae8bc, panel = 0x374549 },
   { cap = 0x3b3149, inactive = 0x5c6181, active = 0xd47563, hover = 0xecc197, text = 0xecece0, panel = 0x191822 },
-  { cap = 0x2a2a2b, inactive = 0x454a4d, active = 0x5a9470, hover = 0x2f7571, text = 0x81b071, panel = 0x202020 },
-  { cap = 0xffeecc, inactive = 0x00b9be, active = 0xff6973, hover = 0xffb0a3, text = 0x15788c, panel = 0x264452 },
+  { cap = 0x313131, inactive = 0x6f564c, active = 0xff9300, hover = 0xfdc484, text = 0x827d6d, panel = 0xf6b511 },
+  { cap = 0xffeecc, inactive = 0x00b9be, active = 0xf57d7d, hover = 0xffb0a3, text = 0x15788c, panel = 0x264452 },
   { cap = 0x413a42, inactive = 0x1f1f29, active = 0xe68056, hover = 0x596070, text = 0xeaf0d8, panel = 0x16181b },
-  { cap = 0x392b35, inactive = 0x7a9c96, active = 0xffab53, hover = 0x486b7f, text = 0xbb474f, panel = 0x5e747e },
-  { cap = 0x100f13, inactive = 0x3a213a, active = 0x914e3c, hover = 0x693540, text = 0xc7955c, panel = 0x1a0d1e },
+  { cap = 0x392b35, inactive = 0x7a9c96, active = 0xffab53, hover = 0x486b7f, text = 0xdac1c1, panel = 0x5e747e },
+  { cap = 0x100f13, inactive = 0x372437, active = 0xa05642, hover = 0x693540, text = 0xc7955c, panel = 0x1a0d1e },
+  { cap = 0x2a2a2b, inactive = 0x454a4d, active = 0x5a9470, hover = 0x2f7571, text = 0x81b071, panel = 0x202020 },
   { cap = 0x212124, inactive = 0x464c54, active = 0x76add8, hover = 0x5b8087, text = 0xa3e7f0, panel = 0x2b3a49 },
   { cap = 0x2e3b43, inactive = 0x619094, active = 0xdcfdcb, hover = 0x5a9e89, text = 0x5fa6ac, panel = 0x9ac0ba },
+  { cap = 0xdddddd, inactive = 0x566063, active = 0x8caab5, hover = 0xfdfaf8, text = 0x073336, panel = 0xf4f4f3 },
+  { cap = 0xa5c09d, inactive = 0x82a775, active = 0x7fe2e5, hover = 0xedf4f2, text = 0x165c44, panel = 0x308e7f },
+  { cap = 0xd7417f, inactive = 0x3b3235, active = 0x785ea0, hover = 0x74509d, text = 0xfcd8d8, panel = 0xfd6193 },
+  { cap = 0xecf1e6, inactive = 0xa8a9b9, active = 0x67bdc8, hover = 0x7fdd8e, text = 0x2d2614, panel = 0xf4fefe },
+  { cap = 0xf5fffc, inactive = 0xa6a6a6, active = 0x5dd276, hover = 0x78cfd0, text = 0x173b4e, panel = 0xf0f4f3 },
+  { cap = 0x46425e, inactive = 0xb28e7c, active = 0xdd9e43, hover = 0x72677b, text = 0xddc2bd, panel = 0x81828e },
 }
 
 m.mouse_available = (not lovr.headset) or (lovr.headset.getName() == 'Simulator')
@@ -389,7 +394,7 @@ panel.__index = panel
 
 local panel_defaults = {
   frame = 'backpanel',
-  palette  = { cap = 0x111111, inactive = 0x444444, active = 0x888888, hover = 0xaaaaaa, text = 0xdddddd, panel = 0xffffff },
+  palette = m.palettes[1],
 }
 
 function m.panel(options)
@@ -402,7 +407,7 @@ function m.panel(options)
   self.widgets = {}
   self.rows = {{}}
   self.span = {1, 1}
-  self.palette = options.palette or m.palettes[m.palettes.active] or panel_defaults.palette
+  self.palette = options.palette or panel_defaults.palette
   self.visible = true
   table.insert(m.panels, self)
   return self
