@@ -99,13 +99,13 @@ function m.button:draw(pass)
   pass:roundrect(0, 0, self.depth / 2,
     self.span[1] - 2 * Q, self.span[2] - 2 * Q, self.depth - Q,
     0, 0,1,0,
-    button_roundness, m.segments)
+    button_roundness * 0.75, m.segments)
   -- frame
   pass:setColor(self.panel.palette.inactive)
   pass:roundrect(0, 0, Q / 2,
     self.span[1], self.span[2], Q,
     0, 0,1,0,
-    button_roundness, m.segments)
+    button_roundness * 0.75, m.segments)
   -- text
   pass:setColor(self.panel.palette.text)
   pass:text(self.text, 0, 0, self.depth + Q, text_scale * self.span[2])
@@ -163,13 +163,13 @@ function m.toggle:draw(pass)
   pass:roundrect(0, 0, self.depth / 2,
     self.span[1] - 2 * Q, self.span[2] - 2 * Q, self.depth - Q,
     0, 0,1,0,
-    button_roundness * 0.75, m.segments)
+    button_roundness, m.segments)
   -- frame
   pass:setColor(self.panel.palette.inactive)
   pass:roundrect(0, 0, Q / 2,
     self.span[1], self.span[2], Q,
     0, 0,1,0,
-    button_roundness * 0.75, m.segments)
+    button_roundness, m.segments)
   -- text
   pass:setColor(self.panel.palette.text)
   pass:text(self.text, 0, 0, self.depth + Q, text_scale * self.span[2])
