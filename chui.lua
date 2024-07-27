@@ -256,7 +256,6 @@ function m.glow:set(state)
 end
 
 
-
 -- PROGRESS ---------------------------------------------------------------------
 m.progress = {}
 m.progress.defaults = { text = '', value = 0 }
@@ -401,14 +400,15 @@ function m.panel(options)
   options = options or {}
   local self = setmetatable({}, panel)
   self.is_panel = true
-  self.frame = options.frame or panel_defaults.frame
-  self.pose = Mat4(options.pose) -- ok if options.pose is nil
+  self.frame = options.frame == nil and panel_defaults.frame or options.frame
+  self.pose = Mat4(options.pose) -- the options.pose is allowed to be nil
   self.world_from_screen = Mat4()
   self.widgets = {}
   self.rows = {{}}
   self.span = {1, 1}
   self.palette = options.palette or panel_defaults.palette
   self.visible = true
+  self.align_offset = Vec3()
   table.insert(m.panels, self)
   return self
 end
@@ -417,6 +417,7 @@ end
 function panel:reset()
   self.widgets = {}
   self.rows = {{}}
+  self.align_offset:set(0, 0)
 end
 
 
@@ -442,42 +443,70 @@ end
 
 
 -- set poses of contained widgets and calculate own span
-function panel:layout(strategy)
-  strategy = strategy or 'vrows'
+function panel:layout(horizontal_alignment, vertical_alignment)
+  horizontal_alignment = horizontal_alignment or 'center'
+  vertical_alignment = vertical_alignment or 'center'
   local margin = 8 * Q -- margin between rows and widgets in row
-  self.span[1] = -math.huge
+  self.span[1] = 0
   self.span[2] = 0
-  -- calculate total height
+  -- calculate total dimensions
+  local row_heights = {}
+  local row_widths = {}
   for r, row in ipairs(self.rows) do
     local max_height = 0
-    for _, widget in ipairs(row) do
+    local row_width = 0
+    for c, widget in ipairs(row) do
       local hspan, vspan = scaledSpan(widget)
       max_height = math.max(max_height, vspan)
+      row_width = row_width + hspan + (c < #row and margin or 0)
     end
+    row_widths[r] = row_width
+    self.span[1] = math.max(self.span[1], row_width)
+    table.insert(row_heights, max_height)
     self.span[2] = self.span[2] + max_height + (r < #self.rows and margin or 0)
   end
-  -- lay out widgets
-  local current_y = self.span[2] / 2
+  -- lay out all widgets across all rows
+  local x_row, y_row
+  y_row = self.span[2] / 2
+
   for r, row in ipairs(self.rows) do
-    local total_span = 0
-    local max_height = 0
-    for _, widget in ipairs(row) do
-      local hspan, vspan = scaledSpan(widget)
-      total_span = total_span + hspan
-      max_height = math.max(max_height, vspan)
+    local max_height = row_heights[r]
+    local row_width = row_widths[r]
+    if horizontal_alignment == 'left' then
+      x_row = -self.span[1] / 2
+    elseif horizontal_alignment == 'right' then
+      x_row = self.span[1] / 2 - row_width
+    else
+      x_row = -row_width / 2
     end
-    local width = total_span + (#row - 1) * margin
-    local x = -width / 2
+    local x = x_row
     for _, widget in ipairs(row) do
       local hspan, vspan = scaledSpan(widget)
-      x = x + hspan / 2
-      local y = current_y - max_height / 2
+      local y = y_row
+      if vertical_alignment == 'top' then
+        y = y - vspan / 2
+      elseif vertical_alignment == 'bottom' then
+        y = y - max_height + vspan / 2
+      else
+        y = y - max_height / 2
+      end
       local scale = widget.is_panel and select(4, widget.pose:unpack()) or 1
-      widget.pose = Mat4(x, y, 0):scale(scale)
-      x = x + hspan / 2 + margin
+      widget.pose = Mat4(x + hspan / 2, y, 0):scale(scale)
+      x = x + hspan + margin
     end
-    current_y = current_y - max_height - margin
-    self.span[1] = math.max(self.span[1], width)
+    y_row = y_row - max_height - margin
+  end
+  -- calculate offset from the panel's pose to align to edge or corner of the panel
+  self.align_offset:set(0, 0)
+  if horizontal_alignment == 'left' then
+    self.align_offset:add(self.span[1] / 2, 0, 0)
+  elseif horizontal_alignment == 'right' then
+    self.align_offset:add(-self.span[1] / 2, 0, 0)
+  end
+  if vertical_alignment == 'top' then
+    self.align_offset:add(0, -self.span[2] / 2, 0)
+  elseif vertical_alignment == "bottom" then
+    self.align_offset:add(0, self.span[2] / 2, 0)
   end
 end
 
@@ -580,13 +609,17 @@ end
 
 
 function panel:getWorldPose()
-  -- for nested panels collect all transforms up to (parentless) root
-  local stacked_pose = mat4(self.pose)
+  -- for nested panels, collect all transforms up to parentless root
+  local stacked_pose = mat4()
   local parent = self.parent
+  local child = self
   while parent do
-    stacked_pose = parent.pose * stacked_pose
+    stacked_pose = child.pose * stacked_pose
+    child = parent
     parent = parent.parent
   end
+  -- for root apply both alignment translation and its world pose
+  stacked_pose = mat4(child.pose):translate(child.align_offset) * stacked_pose
   return stacked_pose
 end
 
@@ -607,6 +640,7 @@ function panel:draw(pass, draw_pointers)
   pass:push()
   if not self.parent then
     pass:transform(self.pose)
+    pass:transform(vec3(self.align_offset))
   else
     pass:transform(0, 0, Q)
   end
@@ -657,7 +691,7 @@ end
 -- creates panel methods for constructing widgets with light OOP based on metatables
 function m.initWidgetType(widget_name, widget_proto)
   widget_proto.__index = widget_proto
-  -- panel.button{text = 'click me'} should make the button and add it to panel
+  -- define constructor, for example panel:button{text = 'click'} adds new button to the panel
   panel[widget_name] = function(self, options)
     options = options or {}
     setmetatable(options, widget_proto.defaults)
@@ -694,17 +728,17 @@ initAllWidgets()
 
 function m.setFont(font) -- accepts path to file or loaded font instance
   if type(font) == 'string' then -- path to font file
-    local ok, res = pcall(lovr.graphics.newFont, font, 10)
+    local ok, res = pcall(lovr.graphics.newFont, font, 32, 4)
     if ok then
       m.font = res
     else
       print('could not load \'' .. font .. '\', defaulting to built-in Varela Round')
-      m.font = lovr.graphics.newFont(10)
+      m.font = lovr.graphics.getDefaultFont()
     end
   elseif tostring(font) == 'Font' then -- a font instance used as-is
     m.font = font
   else
-    m.font = lovr.graphics.newFont(10)
+    m.font = lovr.graphics.getDefaultFont()
   end
 end
 
