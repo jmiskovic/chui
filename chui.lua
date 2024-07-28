@@ -8,7 +8,7 @@ function vibrate(device, strength, duration, frequency)
   end
 end
 
-local Q = 0.025 -- quant; all paddings and margins are its multiples
+local Q = 0.02  -- quant; all paddings and margins are its multiples
 local S = 0.05  -- size of widget actuators
 local text_scale = 0.3
 local button_roundness = 0.3
@@ -519,7 +519,7 @@ end
 function panel:updateWidgets(dt, pointers)
   if not self.visible then return end
   local z_front, z_back = 1.5, -0.3 -- z boundaries of widget AABB
-  local panel_pose_inv = self:getWorldPose():rotate(math.pi, 0,1,0):invert()
+  local panel_pose_inv = self:getWorldPose():invert()
   for _, widget in ipairs(self.widgets) do
     local closest_pos
     local closest_name
@@ -530,7 +530,6 @@ function panel:updateWidgets(dt, pointers)
         local is_hovered = false
         -- reproject pointer onto panel coordinate system and check widget's AABB
         local pos_panel = panel_pose_inv:mul(vec3(pointer[2]))
-        pos_panel.x = -pos_panel.x
         local pos = mat4(widget.pose):invert():mul(pos_panel) -- in panel's coordinate system
         is_hovered = pos.x > -widget.span[1] / 2 and pos.x < widget.span[1] / 2 and
                      pos.y > -widget.span[2] / 2 and pos.y < widget.span[2] / 2 and
@@ -578,9 +577,9 @@ function panel:getMousePointer(pointers, click_offset)
     local hit_spot = ray_origin + ray_direction * ray_length
     if click_offset then
       if lovr.system.isMouseDown(2) then
-        mouse_pointer[2]:set(hit_spot + plane_direction * -(0.2 * scale))
-      else
-        mouse_pointer[2]:set(hit_spot + plane_direction * (0.2 * scale))
+        mouse_pointer[2]:set(hit_spot)
+      else -- back off the mouse pointer away from panel to emulate the hovering
+        mouse_pointer[2]:set(hit_spot + plane_direction * -(0.25 * scale))
       end
     else
       mouse_pointer[2]:set(hit_spot)
