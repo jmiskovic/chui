@@ -54,7 +54,7 @@ function m.spacer:draw(pass, pose)
 end
 
 
-function m.spacer:update(dt, pointer, handness)
+function m.spacer:update(dt, pointer, pointer_name)
 end
 
 
@@ -71,12 +71,12 @@ end
 
 function m.label:draw(pass, pose)
   -- text
-  pass:setColor(self.panel.palette.text)
+  pass:setColor(self.parent.palette.text)
   pass:text(self.text, 0, 0, Q,  0.2 * self.text_scale)
 end
 
 
-function m.label:update(dt, pointer, handness)
+function m.label:update(dt, pointer, pointer_name)
 end
 
 
@@ -99,45 +99,45 @@ end
 function m.button:draw(pass)
   -- body
   pass:setColor(
-    (self.depth < self.thickness / 2 and self.panel.palette.active) or
-    (self.hovered and self.panel.palette.hover) or
-    self.panel.palette.cap)
+    (self.depth < self.thickness / 2 and self.parent.palette.active) or
+    (self.hovered and self.parent.palette.hover) or
+    self.parent.palette.cap)
   pass:roundrect(0, 0, self.depth / 2,
     self.span[1] - 2 * Q, self.span[2] - 2 * Q, self.depth - Q,
     0, 0,1,0,
     button_roundness * 0.75, m.segments)
   -- frame
-  pass:setColor(self.panel.palette.inactive)
+  pass:setColor(self.parent.palette.inactive)
   pass:roundrect(0, 0, Q / 2,
     self.span[1], self.span[2], Q,
     0, 0,1,0,
     button_roundness * 0.75, m.segments)
   -- text
-  pass:setColor(self.panel.palette.text)
+  pass:setColor(self.parent.palette.text)
   pass:text(self.text, 0, 0, self.depth + Q, text_scale * self.span[2])
 end
 
 
-function m.button:update(dt, pointer, handness)
+function m.button:update(dt, pointer, pointer_name)
   local new_depth = self.depth
-  if handness then -- pressing the button inward
+  if pointer_name then -- pressing the button inward
     new_depth = math.min(self.thickness, math.max(2 * Q, pointer.z))
   end
-  if handness and self.hovered and -- button passed the threshold
+  if pointer_name and self.hovered and -- button passed the threshold
       new_depth < self.thickness / 2 then
     if self.held then
       self.held(self)
     end
     if self.depth > self.thickness / 2 then
-      vibrate(handness, 0.2, 0.1)
+      vibrate(pointer_name, 0.2, 0.1)
       if self.callback then
         self.callback(self)
       end
     end
   end
   self.depth = new_depth
-  self.hovered = handness and true or false
-  if not handness then -- slowly rebound to above-hover depth when pointer leaves the widget
+  self.hovered = pointer_name and true or false
+  if not pointer_name then -- slowly rebound to above-hover depth when pointer leaves the widget
     self.depth = math.min(self.thickness, self.depth + 4 * dt)
   end
 end
@@ -167,42 +167,42 @@ end
 function m.toggle:draw(pass)
   -- body
   pass:setColor(
-    (self.state and self.panel.palette.active) or
-    (self.hovered and self.panel.palette.hover) or
-    self.panel.palette.cap)
+    (self.state and self.parent.palette.active) or
+    (self.hovered and self.parent.palette.hover) or
+    self.parent.palette.cap)
   pass:roundrect(0, 0, self.depth / 2,
     self.span[1] - 2 * Q, self.span[2] - 2 * Q, self.depth - Q,
     0, 0,1,0,
     button_roundness, m.segments)
   -- frame
-  pass:setColor(self.panel.palette.inactive)
+  pass:setColor(self.parent.palette.inactive)
   pass:roundrect(0, 0, Q / 2,
     self.span[1], self.span[2], Q,
     0, 0,1,0,
     button_roundness, m.segments)
   -- text
-  pass:setColor(self.panel.palette.text)
+  pass:setColor(self.parent.palette.text)
   pass:text(self.text, 0, 0, self.depth + Q, text_scale * self.span[2])
 end
 
 
-function m.toggle:update(dt, pointer, handness)
+function m.toggle:update(dt, pointer, pointer_name)
   local new_depth = self.depth
-  if handness then -- pressing the toggle inward
+  if pointer_name then -- pressing the toggle inward
     new_depth = math.min(self.thickness, math.max(2 * Q, pointer.z))
   end
-  if handness and self.hovered and -- toggle button passed the threshold
+  if pointer_name and self.hovered and -- toggle button passed the threshold
       new_depth < self.thickness / 2 and
       self.depth > self.thickness / 2 then
-    vibrate(handness, 0.2, 0.1)
+    vibrate(pointer_name, 0.2, 0.1)
     self.state = not self.state
     if self.callback then
       self.callback(self, self.state)
     end
   end
   self.depth = new_depth
-  self.hovered = handness and true or false
-  if not handness then -- rebound
+  self.hovered = pointer_name and true or false
+  if not pointer_name then -- rebound
     self.depth = math.min(self.thickness, self.depth + 4 * dt)
   end
 end
@@ -233,21 +233,21 @@ end
 function m.glow:draw(pass)
   -- body
   pass:setColor(
-    (self.state and self.panel.palette.active) or
-    self.panel.palette.inactive)
+    (self.state and self.parent.palette.active) or
+    self.parent.palette.inactive)
   pass:cylinder(0, 0, self.thickness / 2,  0.5, self.thickness,  0, 0,1,0, true, nil, nil, m.segments * 6)
   -- frame
-  pass:setColor(self.panel.palette.inactive)
+  pass:setColor(self.parent.palette.inactive)
   pass:cylinder(0, 0, Q / 2,
     0.5, Q,
     0, 0,1,0, true, nil, nil, m.segments * 6)
   -- text
-  pass:setColor(self.panel.palette.text)
+  pass:setColor(self.parent.palette.text)
   pass:text(self.text, 0, 0, self.thickness + Q,  text_scale)
 end
 
 
-function m.glow:update(dt, pointer, handness)
+function m.glow:update(dt, pointer, pointer_name)
 end
 
 
@@ -277,16 +277,16 @@ function m.progress:draw(pass)
   local y = -0.15
   local aw = self.span[1] - S - 2 * Q -- available width
   local w = self.value * aw
-  pass:setColor(self.panel.palette.text)
+  pass:setColor(self.parent.palette.text)
   pass:box(0, y, 2 * Q,  aw - 2 * Q, 2 * S, S / 2)
-  pass:setColor(self.panel.palette.active)
+  pass:setColor(self.parent.palette.active)
   pass:roundrect(-aw / 2 + w / 2, y, 4 * Q,
     w, 4 * S, 2 * S,
     0, 0,1,0,
     2 * Q, m.segments)
   -- text
   local y = 0.2
-  pass:setColor(self.panel.palette.text)
+  pass:setColor(self.parent.palette.text)
   pass:text(self.text, 0, y, 2 * Q,  text_scale)
 end
 
@@ -301,7 +301,7 @@ function m.progress:set(value)
 end
 
 
-function m.progress:update(dt, pointer, handness)
+function m.progress:update(dt, pointer, pointer_name)
 end
 
 
@@ -340,37 +340,37 @@ function m.slider:draw(pass)
   local y = -0.15
   local aw = self.span[1] - S - 2 * Q -- available width
   local pos = (self.value - self.min) / (self.max - self.min) * aw
-  pass:setColor(self.panel.palette.text)
+  pass:setColor(self.parent.palette.text)
   pass:box(0, y, 2 * Q,  aw, 2 * S, S / 2)
-  pass:setColor(self.panel.palette.active)
+  pass:setColor(self.parent.palette.active)
   pass:roundrect(-aw / 2 + pos, y, 2 * Q + self.thickness / 2,
     2 * S, 6 * S, self.thickness,
     0, 0,1,0,
     S, m.segments)
   -- frame
   pass:setColor(
-    (self.altered and self.panel.palette.hover) or
-    self.panel.palette.cap)
+    (self.altered and self.parent.palette.hover) or
+    self.parent.palette.cap)
   pass:roundrect(0, 0, Q / 2,
     self.span[1], 1, Q,
     0, 0,1,0,
     slider_roundness, m.segments)
   -- text
   local y = 0.2
-  pass:setColor(self.panel.palette.text)
+  pass:setColor(self.parent.palette.text)
   pass:text(string.format(self.format, self.text, self.value),
     0, y, 2 * Q,  text_scale)
 end
 
 
-function m.slider:update(dt, pointer, handness)
-  local hovered = handness and true or false
+function m.slider:update(dt, pointer, pointer_name)
+  local hovered = pointer_name and true or false
   local altered_next = pointer.z < self.thickness
   if hovered and altered_next then
     local aw = self.span[1] - 16 * Q -- available width
     local value = self.min + (aw / 2 + pointer.x) / aw * (self.max - self.min)
     self:set(value)
-    vibrate(handness, 0.2, dt)
+    vibrate(pointer_name, 0.2, dt)
   end
   if not altered_next and self.altered and self.callback then
     self.callback(self, self.value)
@@ -522,7 +522,7 @@ function panel:updateWidgets(dt, pointers)
   local panel_pose_inv = self:getWorldPose():rotate(math.pi, 0,1,0):invert()
   for _, widget in ipairs(self.widgets) do
     local closest_pos
-    local closest_hand
+    local closest_name
     if widget.interactive then
       closest_pos = vec3(math.huge)
       for _, pointer in ipairs(pointers) do -- process each pointer
@@ -537,11 +537,11 @@ function panel:updateWidgets(dt, pointers)
                      pos.z < z_front and pos.z > z_back
         if is_hovered and math.abs(pos.z) < math.abs(closest_pos.z) then
           closest_pos:set(pos)
-          closest_hand = pointer[1]
+          closest_name = pointer[1]
         end
       end
     end
-    widget:update(dt, closest_pos, closest_hand)
+    widget:update(dt, closest_pos, closest_name)
   end
 end
 
@@ -712,7 +712,7 @@ function m.initWidgetType(widget_name, widget_proto)
       assert(false, "unsupported widget span value")
     end
     widget:init(options)
-    widget.panel = self
+    widget.parent = self
     self:appendWidget(widget)
     return widget
   end
