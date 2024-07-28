@@ -1,6 +1,5 @@
--- module has color manipulation functions and implements palette editing
+-- color manipulation functions
 local m = {}
-m.enabled = true
 
 -- compute red/green/blue table from the hue/satureation/lightness table
 function m.fromHSL(hsla) -- hsla is table array
@@ -40,21 +39,7 @@ function m.toHexcode(colorTable)
   local r, g, b, _ = unpack(colorTable)
   r, g, b = math.floor(r * 255 + 0.5), math.floor(g * 255 + 0.5), math.floor(b * 255 + 0.5)
   local num = bit.lshift(r, 16) + bit.lshift(g, 8) + bit.lshift(b, 0)
-  return string.format('0x%6X', num)
-end
-
-
--- map all colors from one palette to another
-function m.mapPalette(A, B)
-  -- for each color find distances to all other colors
-  local distances = {}
-  for _, colorA in ipairs(A) do
-    for _, colorB in ipairs(B) do
-      table.insert(distances, {colorA, colorB, vec3(colorA):distance(colorB)})
-    end
-  end
-  -- make unique pairings whilst minimizing the total distance
-  -- sort the palette B so that mapped colors are at the same index
+  return string.format('0x%06x', num)
 end
 
 
@@ -87,30 +72,6 @@ function m.toHSL(rgba) -- rgba is table array or hexcode
 end
 
 
--- set the edited palette
-function m.setPalette(palette)
-  m.palette = palette
-  m.edited = nil
-  m.select()
-end
-
-
--- select a color from palette: by index, by name or select the next one
-function m.select(key)
-  if not key then
-    key = next(m.palette, m.edited)
-    if not key then
-      key = next(m.palette)
-    end
-  elseif type(key) == 'number' then
-    key = 1 + key % #m.palette
-  end
-  m.edited = key
-  local color = m.palette[m.edited]
-  m.hsla = m.toHSL(color)
-end
-
-
 -- get the HSL string representation of a given color, or the edited color
 function m.toStringHSL(color)
   if color then
@@ -121,27 +82,14 @@ function m.toStringHSL(color)
 end
 
 
--- create a small image of all colors in the palette
-function m.toImage()
-  -- convert m.palette dictionary to array
-  local palette
-  if type(next(m.palette)) ~= 'number' then
-    palette = {}
-    for _, color in pairs(m.palette) do
-      table.insert(palette, color)
-    end
-  else
-    palette = m.palette
-  end
-  local rows = math.floor(math.sqrt(#palette))
-  local cols = math.ceil(#palette / rows)
-  local image = lovr.data.newImage(rows, cols)
-  for i, color in ipairs(palette) do
+function m.chuiPaletteString(palette)
+  local out = {}
+  for _, name in ipairs({'cap', 'inactive', 'active', 'hover', 'text', 'panel'}) do
+    color = palette[name]
     color = type(color) == 'table' and color or m.fromHexcode(color)
-    local x, y = (i - 1) % rows, math.floor((i - 1) / rows)
-    image:setPixel(x, y, unpack(color))
+    table.insert(out, string.format('%s = %s', name, m.toHexcode(color)))
   end
-  return image
+  return '{ ' .. table.concat(out, ', ') .. ' },'
 end
 
 
@@ -163,40 +111,6 @@ function m.info()
   table.insert(out, '}')
   table.insert(out, string.format('selected = %s', tostring(m.edited)))
   return table.concat(out, '\n')
-end
-
-
--- color is changed dragging the HSL along one of these axes
-local axes = {
-  lovr.math.newVec3(   1, 0, 0):normalize(),              -- hue
-  lovr.math.newVec3(-1/2, math.sqrt(3)/2, 0):normalize(), -- saturation
-  lovr.math.newVec3( 1/2, math.sqrt(3)/2, 0):normalize(), -- lightness
-}
-
-
--- modify the selected color while left hand trigger is pressed
-function m.update(dt)
-  if not m.enabled then return end
-  if lovr.headset.isDown('hand/left', 'trigger') then
-    local vel = vec3(lovr.headset.getVelocity('hand/left'))
-    -- make movements relative to the head orientation
-    quat(lovr.headset.getOrientation('head'))
-      :conjugate()
-      :mul(vel)
-    local max_proj, max_i
-  for i, axis in ipairs(axes) do
-      local proj = vel:dot(axis)
-      if max_proj == nil or math.abs(proj) > math.abs(max_proj) then
-        max_proj = proj
-        max_i = i
-      end
-    end
-    m.hsla[max_i] = m.hsla[max_i] + max_proj * dt * 0.5
-    m.hsla[1] = m.hsla[1]  % 1
-    m.hsla[2] = math.min(1, math.max(0, m.hsla[2]))
-    m.hsla[3] = math.min(1, math.max(0, m.hsla[3]))
-    m.palette[m.edited] = m.fromHSL(m.hsla)
-  end
 end
 
 
