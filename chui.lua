@@ -82,7 +82,7 @@ end
 
 -- BUTTON ---------------------------------------------------------------------
 m.button = {}
-m.button.defaults = { text = '', thickness = 0.3, callback = nil }
+m.button.defaults = { text = '', thickness = 0.3, callback = nil, held = nil }
 table.insert(m.widget_types, 'button')
 
 function m.button:init(options)
@@ -90,6 +90,7 @@ function m.button:init(options)
   self.hovered = false
   self.text = options.text
   self.callback = options.callback
+  self.held = options.held
   self.thickness = options.thickness
   self.depth = self.thickness
 end
@@ -118,19 +119,23 @@ end
 
 
 function m.button:update(dt, pointer, handness)
-  local depth_next = self.depth
+  local new_depth = self.depth
   if handness then -- pressing the button inward
-    depth_next = math.min(self.thickness, math.max(2 * Q, pointer.z))
+    new_depth = math.min(self.thickness, math.max(2 * Q, pointer.z))
   end
   if handness and self.hovered and -- button passed the threshold
-      depth_next < self.thickness / 2 and
-      self.depth > self.thickness / 2 then
-    vibrate(handness, 0.2, 0.1)
-    if self.callback then
-      self.callback(self)
+      new_depth < self.thickness / 2 then
+    if self.held then
+      self.held(self)
+    end
+    if self.depth > self.thickness / 2 then
+      vibrate(handness, 0.2, 0.1)
+      if self.callback then
+        self.callback(self)
+      end
     end
   end
-  self.depth = depth_next
+  self.depth = new_depth
   self.hovered = handness and true or false
   if not handness then -- slowly rebound to above-hover depth when pointer leaves the widget
     self.depth = math.min(self.thickness, self.depth + 4 * dt)
@@ -182,12 +187,12 @@ end
 
 
 function m.toggle:update(dt, pointer, handness)
-  local depth_next = self.depth
+  local new_depth = self.depth
   if handness then -- pressing the toggle inward
-    depth_next = math.min(self.thickness, math.max(2 * Q, pointer.z))
+    new_depth = math.min(self.thickness, math.max(2 * Q, pointer.z))
   end
   if handness and self.hovered and -- toggle button passed the threshold
-      depth_next < self.thickness / 2 and
+      new_depth < self.thickness / 2 and
       self.depth > self.thickness / 2 then
     vibrate(handness, 0.2, 0.1)
     self.state = not self.state
@@ -195,7 +200,7 @@ function m.toggle:update(dt, pointer, handness)
       self.callback(self, self.state)
     end
   end
-  self.depth = depth_next
+  self.depth = new_depth
   self.hovered = handness and true or false
   if not handness then -- rebound
     self.depth = math.min(self.thickness, self.depth + 4 * dt)
