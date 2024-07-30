@@ -1,47 +1,65 @@
-# chui
+# chui - immersive 3D UI library
 
-## Description
+`chui` is a library for 3D user interfaces within the [LÖVR](https://github.com/bjornbytes/lovr)
+framework for both desktop and VR environments. Moving beyond the flat UIs and laser-pointer VR
+interaction, chui widgets are interacted with by pressing and pushing with natural movements. This
+immersive approach is elsewhere known as diegetic UI or Direct Touch.
 
-`chui` is a small UI library for the [LÖVR](https://github.com/bjornbytes/lovr) framework,
-exploring the VR manipulation of UI. Instead of laser pointers, users reach out and push the UI
-elements using their finger tips or controllers. Elsewhere called diegetic UI, or Direct Touch
-method. chui stands for *c*ompact *h*aptic *u*tility *i*nterlink, and is so tiny it has to be
-written in lowercase.
+![showcase screenshot](media/showcase.png)
 
-The UI is handled in retained mode - you create panels & add widgets only once during UI
-initialization. Stored references to widgets and panels can be modified in runtime as needed. For an
-immediate mode UI library check out [lovr-ui](https://github.com/immortalx74/lovr-ui).
+The main library goal is for simple user code to build attractive interfaces that can serve a wide
+range of applications: main menu selections, configuration screens, toolbars, as well as interactive
+elements within virtual worlds. chui stands for **c**ompact **h**aptic **u**tility **i**nterlink.
+
+chui uses retained mode for UI state - you create panels & add widgets only once during UI
+initialization. Stored references to widgets and panels can be modified in runtime as needed. If you
+are instead interested in an immediate mode UI library for LÖVR, check out the
+[lovr-ui](https://github.com/immortalx74/lovr-ui).
 
 ```lua
 chui = require'chui'
 
-panel = chui.panel()
-panel:label { text = 'hello world' }
-panel:layout() -- aligns widgets in vertically centered rows
+panel = chui.panel()                  -- panel is a container for widgets which are arranged in rows
+panel.pose:set(0, 1.5, -2):scale(0.2) -- position the panel in 3D space (see lovr's mat4)
 
-panel.pose:set(0, 1.5, -2, math.pi, 0,1,0) -- rotate panel to face us
+panel:label{ text = 'Hello!' }
+panel:row()                           -- finishes one row and starts a new row of widgets
+panel:button{ text = 'click me',
+  callback = function(self)
+    self.text = 'clicked'
+  end}
 
--- update not needed for passive label
+panel:layout()                        -- needs to be called after all the widgets are inserted
+
+function lovr.update(dt)
+  chui.update(dt)                     -- let UI process the pointer interactions
+end
+
 function lovr.draw(pass)
-  chui.draw(pass)
+  chui.draw(pass)                     -- render to screen
 end
 ```
 
-UI elements are controlled with left & right VR controller, the index fingertips if hands are
-tracked, or with the mouse. UI elements are operated with the right mouse button (because the LÖVR
-VR simulator uses the left mouse button to rotate the camera).
+In VR the UI elements are controlled with left & right controller, or with your hand-tracked index
+finger tips. On desktop, the UI interaction uses right mouse button. This is because the LÖVR VR
+simulator already binds the left mouse button for camera rotation.
 
-### Layout
+## Layout mechanics
 
-Panel is a container for one or more widgets. It can optionally (by default) render its back side.
+Panel acts as a container for one or more widgets, arranged in horizontal rows. The panel structure
+manages the 3D position/scale/orientation through its pose, takes care of arranging widgets with a
+flexible layout mechanism, handles pointer world-local transitions, assigns the color scheme to
+the contained widgets, and optionally renders a rounded back-panel frame to enhance visibility and
+grounding of the contained widgets within the 3D scene.
 
-The panel stores a list of vertically centered rows, each row is filled with widgets.
+The panel stores a list of top-to-down rows, and each row is filled with widgets in left-to-right
+order.
 
 ```lua
 panel = chui.panel()
 panel:label{ text = 'button >' }
 panel:button()
-panel:row()
+panel:row()                       -- start of new row
 panel:label{ text = 'toggle >' }
 panel:toggle()
 panel:layout()
@@ -49,100 +67,229 @@ panel:layout()
 
 At the end of panel definition, the `layout()` function is called to arrange widgets.
 
-![layouting](media/layouting.png)
+The UI widgets are organized in neat rows. Rows expand horizontally to fit all the widgets. Each row
+also adjusts its height to accommodate the tallest element. By default, rows are centered
+horizontally and widgets are centered vertically within their rows. This alignment can be controlled
+through parameters to panel layout function.
 
-All Widgets have the height of 1 *unit*. Each widget gets allocated horizontal space inside its row.
-More or less space can be requested by the `span = 2` in widget init table. Each row is vertically
-centered inside the panel. Layout function also calculates the overall panel dimensions for the
-frame rendering.
+![layouting](media/row-alignment.png)
 
-This simple and flexible layout scheme has one downside - the 'columns' inside each row don't align
-automatically, so it is not a true table grid. Sometimes spacers are needed to adjust the vertical
-alignments between two rows.
+Widgets can request more or less space using the `span = {horizontal, vertical}` parameter in their
+initialization table. This can also be changed later, but remember to manually re-layout the panel
+afterwards. Note that increasing vertical span won't make the widget overflow into next row; instead
+the row hight will be increased. The **nested-alignment** interactive example may help with
+understanding how the row-based alignment works.
 
-Skipping this layout method also works. Widgets can also just be manually positioned by modifying
-their `.pose` matrix, which is relative to the panel's own `.pose`. Note that widgets should be
-oriented in +Z direction to face away from the panel.
+Unlike more complex and less predictable layout methods, the implementation uses manually defined
+widget dimensions that do not automatically adjust to content size. Users are responsible for
+ensuring sufficient space is allocated for text within UI elements.
 
-### Options
+In case the built-in layout mechanism is not flexible enough, widgets can be positioned manually
+by specifying relative offsets to the panel center in each widget's `.pose` matrix. All widgets
+should be oriented in +Z direction so they face outwards from the panel. It is also necessary to
+specify panel's dimensions in `.span` table, if the back-panel is rendered or if the panel is
+intended to be nested.
 
-When creating the panel, we can specify some parameters:
+#### Nesting of panels
+
+The panels can be nested within each other. A nested panel behaves like any other widget in the
+parent panel. Parent will use the dimensions (specified by `span`) of nested panel during the layout
+to place it next to other elements.
+
+![panel nesting](media/panel-nesting.png)
+
+This is an advanced feature that can be used to compose complex components that act as a single
+widget. For example, a checkbox can be constructed from a small toggle button and a label next to
+it; this combination can then be nested in other panels, behaving like a single built-in widget.
+
+Nesting panels can also be used for fine control over the layout. Each sub-panel can have its own
+horizontal/vertical alignment settings and the parent panel has its own settings. This enables more
+precise positioning for column-based layouts, with each column being a nested panel. Furthermore,
+the nested panel can have a custom `pose` scale to make some parts of UI bigger or smaller.
+
+The nested panels can specify their own color palettes, enabling diverse and interesting visual
+designs of user interfaces.
+
+## chui API
+
+`chui.draw(pass, draw_pointers)` renders all created panels in the 3D scene. If `draw_pointers` is
+`true`, a small sphere will be rendered for each pointer device, with its position projected onto
+the panel surface. User can also call the `panel:draw(pass)` method on individual panels for finer
+control over rendering.
+
+`chui.update(dt)` processes pointer interactions across all panels. User can also call the
+`panel:update(dt)` method on individual panels.
+
+`chui.setFont(nil or font_path or font_object)` changes the font used for all text rendered by the
+library.
+
+`chui.reset()` releases references to created panels.
+
+`chui.initWidgetType(widget_name, widget_proto)` is an advanced feature to register a new widget for
+usage with chui. The `widget_name` is a string that is later used to create new widgets (e.g.
+`panel:widget_name{ }`). `widget_proto` is a table containing implementations of custom widget's
+`:init(options)`, `:draw(pass)` and `:update(dt)` methods.
+
+### Panel API
+
+Both panels and widgets accept an options table to customize their appearance or behavior. Below,
+each entry includes the default values (equivalent to using an empty table `{}`).
 
 ```lua
-chui.panel{ frame = false, palette = chui.palettes[3] } -- frame=false omits drawing the back-panel 
+panel = chui.panel{ pose = mat4(), frame = 'backpanel', palette = chui.palettes[1] }
+```
+* the pose sets the position, scaling and orientation of the panel in 3D space; for nested panels
+only the scale is preserved during the parent panel layout process
+* use `frame = false` to prevent rendering of the rounded back panel frame
+* chui library includes a number of built-in palettes, and color scheme can be further customized
+with the included *palette-designer* app
+
+`panel:draw(pass, draw_pointers)` renders a single panel at position assigned by its `pose`. Only
+top-level (non-nested) panels should be manually drawn; nested panels are automatically rendered as
+part of their parent's draw process.
+
+`panel:update(dt)` updates interactive widget states within the panel, using any active pointers
+for input. Only top-level (non-nested) panels should be manually updated; nested panels
+will be automatically update as part of their parent update process.
+
+`panel:reset()` removes all added widgets, allowing the same panel instance be populated with a new
+set of widgets.
+
+`panel:row()` ends the current row and adds a fresh row at the bottom of the panel. New widgets and
+nested panels are added to this new row.
+
+`panel:nest(child_panel)` embeds a child panel within the current panel, treating it like any other
+widget. Just like adding any other widget, the child panel gets added to the end of last row.
+
+`panel:layout(horizontal_alignment | nil, vertical_alignment | nil)` arranges widgets and nested
+panels to prevent overlap, calculating the panel's overall dimensions span. It is typically called
+at the end of the panel initialization, after all widgets are added, but can also be invoked
+whenever the panel's arrangement changes.
+
+The `horizontal_alignment` parameter (`left`, `right`, or default `center`) dictates the alignment
+of multiple rows within the panel. Similarly, `vertical_alignment` (`top`, `bottom`, or default
+`center`) controls the alignment of widgets within a single row.
+
+The horizontal and vertical alignment also influence the panel's positioning relative to its
+assigned pose. For instance, a top-aligned panel is positioned relative to its top edge and
+extends downwards. Conversely a bottom-right aligned panel extends upwards and leftwards from its
+fixed bottom-right corner.
+
+The panel object provides constructor methods for each widget type, that are used to add widgets.
+The widgets always get added to the end of last row. A list of these constructor methods follows.
+
+### Widgets API
+
+In addition to the specific widget options listed below, each widget can accept a
+`span = {horizontal, vertical}` which controls the allocated space during the layout operation.
+The default span for all widgets is `{1, 1}`. You can also specify only the horizontal span (e.g.
+`span = 2`).
+
+**Spacer** is an invisible non-interactive element used to create empty space or push other widgets
+apart, affecting the panel size. It has no additional options beyond the mentioned `span`.
+
+```lua
+panel:spacer{}
 ```
 
-The library has few widgets, with listed parameters and their defaults:
+**Label** is a simple non-interactive text, with controllable font size.
 
-- spacer - blank space widget for aligning other widgets
+```lua
+panel:label{ text = '', text_scale = 1 }
+```
 
-  `{ span = 1 }`
+**Button** is a momentary push-button widget. The optional callback function is called with
+  `(self)`, where `self` is a reference to the pressed button widget. Besides using callback, users
+  can call `my_button:get()` to poll the current state of the button.
 
-- label - simple centered text
+```lua
+panel:button{ text = '', thickness = 0.3, callback = nil }
+```
 
-  `{ text = '', text_scale = 1, span = 1 }`
+**Toggle** is a latching toggle button widget. The optional callback function is called with
+`(self, state)`. Besides interacting with widget and assigning the callback, users can call
+ `toggle:set(true_or_false)` and `current_state = toggle:get()` to set or poll the binary state.
 
-- button - push button with callback function
+```lua
+panel:toggle{ text = '', thickness = 0.3, state = false, callback = nil }
+```
 
-  `{ text = '', thickness = 0.3, callback = nil, span = 1 }`
+**Glow** is a non-interactive indicator of its boolean state, being lit up when true. The widget has
+`:get()` and `:set(true_or_false)` methods.
 
-- toggle - on / off button with state-changed callback
+```lua
+panel:glow{ text = '', thickness = 0.1, state = false }
+```
 
-  `{ text = '', thickness = 0.3, state = false, callback = nil, span = 1 }` 
+**Progress** is a non-interactive visualizer of a numerical value in range from 0 to 1. It has the
+`:get()` method, and a `:set(normalized_value)` method which will also clamp the input value to
+supported range.
 
-- glow - a LED showing on/off state, with optional label on it
+```lua
+panel:progress{ text = '', value = 0 }
+```
 
-  `{ text = '', thickness = 0.1, state = false, span = 1 }`
+**Slider** is visual component for modifying a numerical value. The `step` option (for example `step=0.25`) specifies granularity; use `step=1` for integer slider. The `format` string is an
+advanced option to customize the appearance of slider label; mainly to control the number of digits
+displayed.
 
-- progress - a horizontal bar representing a numerical value
+The optional callback function is called with `(self, value)` parameters, when the user stops interacing with the widget. Widget also has `:get()` and `:set(value)` methods.
 
-  `{ text = '', value = 0, span = 1 }`
+```lua
+panel:slider{ text = '',  format = '%s %.2f', min = 0, max = 1, value = 0, step = nil, thickness = 0.15, callback = nil }
+```
 
-- slider - horizontal knob that controls a numerical value
-
-  `{ text = '', min = 0, max = 1, value = 0, step = nil, thickness = 0.15, callback = nil, span = 1 }`
-
+More custom widgets can be implemented outside the chui source and integrated into the lib with the
+`initWidgetType` function.
 
 ## Demos & utilities
 
-##### testapp
+##### showcase app
 
-A collection of all the widgets for testing the library and a basic palette switcher/editor.
+A collection of all the built-in widgets, for testing the library and as learning reference.
 
-Color editing is enabled with *F1*, this brings up the orb with edited color.
+##### nested-alignment
 
-*F3* selects which color in palette is currently edited
+![nested-alignment screenshot](media/nested-alignment.png)
 
-Using horizontal and diagonal gestures (trigger + motion or right mouse + motion), the color is
-modified across the hue, saturation and lightness axes.
+The sample app constructs 5x5 randomly sized toggle-buttons, and offers 9 ways to align them. It
+demonstrates the nesting of a panel within another, and the alignment mechanics. Note how the top
+and bottom alignment works per-row, while left and right options align the entire rows without
+changing the relative positions of widgets within the row.
 
-When done editing the palette, press *F4* to print out your fancy new palette in the console.
+##### palette-designer
 
-*F2* cycles through predefined palettes.
+A color palette designer for previewing and modifying chui color palettes. Select one of built-in
+color palettes, see the preview for all built-in widgets, dynamically edit colors with HSL sliders,
+and print out the palette table to the console output.
 
-![chui-palettes](media/chui-palettes.gif)
+![palette-designer screenshot](media/palette-designer.png)
 
-The included `colorizer.lua` library has some useful color conversions for HSL and hexcode formats.
+
+The included `colorizer.lua` code also has some useful color conversion utilities between HSL, RGB table and hexcode formats for storing color.
 
 ##### vkeyboard
 
-A basic virtual keyboard and a text entry field.
+A full 3D virtual keyboard and a basic text edit box.
 
-![vqwerty](media/vqwerty.png)
+![vqwerty screenshot](media/vqwerty.png)
 
 The `vqwerty.lua` is reusable module that creates the virtual keyboard panel. The pressed keys are
-registered as key events in `lovr`. Code is easily adaptable to numpad or any custom keyboard
-layout.
+registered as key events in LÖVR, so they should work out-of-the-box with any LÖVR project that
+consumes the hardware keyboard events. The layout is also easily adaptable to a numpad or any other
+keyboard arrangement.
 
 ##### sequencer
 
-A music sequencer with 4 drum tracks and per-track volume & pitch control.
+An example of complete app in LÖVR + chui, a basic music drum sequencer with 4 tracks and per-track
+volume & pitch control. The VR mode is disabled and the UI is configured to work in 2D desktop mode
+with orthographic projection, dynamically adaptating when the window resizes.
 
-![sampler](media/sampler.png)
+![sampler screenshot](media/sequencer.png)
 
 ## Contributing
 
-Let me know what could be simpler and what's missing.
+Let me know what could be made simpler and what's missing in your usage.
 
 Issues & code contributions are always welcome!
 
