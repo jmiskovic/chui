@@ -55,7 +55,6 @@ end
 
 function lovr.draw(pass)
   pass:setWireframe(lovr.system.isKeyDown('tab')) -- x-vision
-  chui.draw(pass, true)
+  chui.draw(pass)
   pass:setColor(0.8, 0.9, 0.5)
-  pass:sphere(vec3(lovr.headset.getPosition('left')), 0.01)
 end

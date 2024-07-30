@@ -34,6 +34,8 @@ main_panel:button{ text='bottom-center', callback=function(_, state) inner_panel
 main_panel:button{ text='bottom-right',  callback=function(_, state) inner_panel:layout('right',  'bottom') end, span=2 }
 main_panel:layout()
 
+lovr.graphics.setBackgroundColor(1,1,1)
+
 function lovr.draw(pass)
   chui.draw(pass)
 end

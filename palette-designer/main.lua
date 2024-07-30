@@ -91,5 +91,5 @@ function lovr.update(dt)
 end
 
 function lovr.draw(pass)
-  chui.draw(pass, true)
+  chui.draw(pass)
 end

@@ -1,4 +1,4 @@
--- a toy drum sequencer as demo app for chui UI framework
+-- a toy drum sequencer working in 2D desktop mode
 package.path = package.path .. ";../?.lua" -- needed for chui.lua to be located in parent directory
 
 local chui = require'chui'
@@ -36,10 +36,7 @@ local seq_table = defaultdict(function() return {} end)
 
 -- start building the UI; first the instrument lanes and then general controls
 
-local sequencer_panel = chui.panel{
-  palette = chui.palettes[6],
-  pose=mat4(0, 1.65, -0.3):scale(0.04)
-  }
+local sequencer_panel = chui.panel{ palette=chui.palettes[6] }
 local volume_sliders = {}
 local pitch_sliders = {}
 
@@ -98,5 +95,13 @@ end
 
 
 function lovr.draw(pass)
+  -- use orthographic projection; dynamically adapt the panel size/position to the window dimensions
+  local screen_width, screen_height = pass:getDimensions()
+  local scale = screen_width / sequencer_panel.span[1] * 0.95
+  sequencer_panel.pose:set(screen_width / 2, screen_height / 2, 0):scale(scale)
+  pass:setProjection(1, mat4():orthographic(
+    0, screen_width, screen_height, 0,
+    scale, -scale))
+
   sequencer_panel:draw(pass, true) -- draw panel itself and the interacting pointer
 end
