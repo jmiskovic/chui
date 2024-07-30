@@ -235,11 +235,13 @@ function m.glow:draw(pass)
   pass:setColor(
     (self.state and self.parent.palette.active) or
     self.parent.palette.inactive)
-  pass:cylinder(0, 0, self.thickness / 2,  0.5, self.thickness,  0, 0,1,0, true, nil, nil, m.segments * 6)
+  pass:cylinder(0, 0, self.thickness / 2,
+    0.5, self.thickness,
+    0, 0,1,0, true, nil, nil, m.segments * 6)
   -- frame
   pass:setColor(self.parent.palette.inactive)
   pass:cylinder(0, 0, Q / 2,
-    0.5, Q,
+    0.5 + Q, Q,
     0, 0,1,0, true, nil, nil, m.segments * 6)
   -- text
   pass:setColor(self.parent.palette.text)
