@@ -741,7 +741,7 @@ function m.setFont(font) -- accepts path to file or loaded font instance
       print('could not load \'' .. font .. '\', defaulting to built-in Varela Round')
       m.font = lovr.graphics.getDefaultFont()
     end
-  elseif tostring(font) == 'Font' then -- a font instance used as-is
+  elseif tostring(font):match('Font') then -- a font instance used as-is
     m.font = font
   else
     m.font = lovr.graphics.getDefaultFont()
