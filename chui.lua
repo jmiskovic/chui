@@ -2,7 +2,7 @@
 
 local m = {}
 
-function vibrate(device, strength, duration, frequency)
+local function vibrate(device, strength, duration, frequency)
   if device ~= 'mouse' and lovr.headset then
     lovr.headset.vibrate(device, strength, duration, frequency)
   end
@@ -215,6 +215,9 @@ end
 
 function m.toggle:set(state)
   self.state = state and true or false
+  if self.callback then
+    self.callback(self, self.state)
+  end
 end
 
 
@@ -287,9 +290,8 @@ function m.progress:draw(pass)
     0, 0,1,0,
     2 * Q, m.segments)
   -- text
-  local y = 0.2
   pass:setColor(self.parent.palette.text)
-  pass:text(self.text, 0, y, 2 * Q,  text_scale)
+  pass:text(self.text, 0, 0.2, 2 * Q,  text_scale)
 end
 
 
@@ -311,7 +313,7 @@ end
 m.slider = {}
 m.slider.__index = m.slider
 m.slider.defaults = { text = '',  format = '%s %.2f',
-  min = 0, max = 1, value = 0, step = nil, thickness = 0.15, callback = nil }
+  min = 0, max = 1, value = 0, step = nil, thickness = 0.15, callback = nil, live_update = true }
 table.insert(m.widget_types, 'slider')
 
 local function roundBy(value, step)
@@ -329,11 +331,17 @@ function m.slider:init(options)
   self.callback = options.callback
   self.step = options.step
   self.format = options.format
+  self.live_update = options.live_update
+  self.altered = false
   if not options.format and self.step then
     local digits = math.max(0, math.ceil(-math.log(self.step, 10)))
     self.format = string.format('%%s %%.%df', digits)
   end
-  self:set(options.value)
+  local value = options.value
+  if self.step then
+    value = roundBy(value, self.step)
+  end
+  self.value = math.max(self.min, math.min(self.max, value))
 end
 
 
@@ -358,10 +366,9 @@ function m.slider:draw(pass)
     0, 0,1,0,
     slider_roundness, m.segments)
   -- text
-  local y = 0.2
   pass:setColor(self.parent.palette.text)
   pass:text(string.format(self.format, self.text, self.value),
-    0, y, 2 * Q,  text_scale)
+    0, 0.2, 2 * Q,  text_scale)
 end
 
 
@@ -391,6 +398,9 @@ function m.slider:set(value)
     value = roundBy(value, self.step)
   end
   self.value = math.max(self.min, math.min(self.max, value))
+  if self.callback and self.live_update then
+    self.callback(self, self.value)
+  end
 end
 
 
@@ -532,7 +542,7 @@ function panel:updateWidgets(dt, pointers)
         local is_hovered = false
         -- reproject pointer onto panel coordinate system and check widget's AABB
         local pos_panel = panel_pose_inv:mul(vec3(pointer[2]))
-        local pos = mat4(widget.pose):invert():mul(pos_panel) -- in panel's coordinate system
+        pos = mat4(widget.pose):invert():mul(pos_panel) -- in panel's coordinate system
         is_hovered = pos.x > -widget.span[1] / 2 and pos.x < widget.span[1] / 2 and
                      pos.y > -widget.span[2] / 2 and pos.y < widget.span[2] / 2 and
                      pos.z < z_front and pos.z > z_back
@@ -667,7 +677,7 @@ function panel:draw(pass, draw_pointers)
   pass:pop()
   if draw_pointers then
     local pointers = pointers or self:getPointers(false)
-    pass:setColor(color or 0x404040)
+    pass:setColor(0x404040)
     local radius = 0.01
     for _, pointer in ipairs(pointers) do
       pass:sphere(mat4(pointer[2]):scale(radius), m.segments, m.segments)
@@ -751,18 +761,18 @@ end
 -- convenience functions for multiple panels, user can also just call :update & :draw on the panel
 
 function m.update(dt) -- neccessary for UI interactions
-  for _, panel in ipairs(m.panels) do
-    if not panel.parent then
-      panel:update(dt)
+  for _, pnl in ipairs(m.panels) do
+    if not pnl.parent then
+      pnl:update(dt)
     end
   end
 end
 
 
 function m.draw(pass, draw_pointers)
-  for _, panel in ipairs(m.panels) do
-    if not panel.parent then
-      panel:draw(pass, draw_pointers)
+  for _, pnl in ipairs(m.panels) do
+    if not pnl.parent then
+      pnl:draw(pass, draw_pointers)
     end
   end
 end
