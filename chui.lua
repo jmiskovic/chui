@@ -426,6 +426,7 @@ function m.panel(options)
   self.palette = options.palette or panel_defaults.palette
   self.visible = true
   self.align_offset = Vec3()
+  self.layout_options = {'center', 'center'}
   table.insert(m.panels, self)
   return self
 end
@@ -446,6 +447,7 @@ end
 function panel:nest(child_panel)
   assert(child_panel)
   child_panel.parent = self
+  self.widget_name = 'nested panel'
   self:appendWidget(child_panel)
 end
 
@@ -453,7 +455,11 @@ end
 local function scaledSpan(widget)
   local scale = 1
   if widget.is_panel then
-    scale = select(4, widget.pose:unpack())
+    if widget.visible then
+      scale = select(4, widget.pose:unpack())
+    else
+      scale = 0
+    end
   end
   return widget.span[1] * scale, widget.span[2] * scale
 end
@@ -461,8 +467,9 @@ end
 
 -- set poses of contained widgets and calculate own span
 function panel:layout(horizontal_alignment, vertical_alignment)
-  horizontal_alignment = horizontal_alignment or 'center'
-  vertical_alignment = vertical_alignment or 'center'
+  horizontal_alignment = horizontal_alignment or self.layout_options[1]
+  vertical_alignment = vertical_alignment or self.layout_options[2]
+  self.layout_options = {horizontal_alignment, vertical_alignment}
   local margin = 8 * Q -- margin between rows and widgets in row
   self.span[1] = 0
   self.span[2] = 0
@@ -722,9 +729,10 @@ function m.initWidgetType(widget_name, widget_proto)
     else
       assert(false, "unsupported widget span value")
     end
-    widget:init(options)
+    widget.widget_type = widget_name
     widget.parent = self
     self:appendWidget(widget)
+    widget:init(options)
     return widget
   end
 end
