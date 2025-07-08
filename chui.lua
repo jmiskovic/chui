@@ -778,6 +778,11 @@ function m.setFont(font) -- accepts path to file or loaded font instance
   end
 end
 
+
+function m.setTextSize(size)
+  text_scale = size
+end
+
 -- convenience functions for multiple panels, user can also just call :update & :draw on the panel
 
 function m.update(dt) -- neccessary for UI interactions
