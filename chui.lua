@@ -35,7 +35,7 @@ m.palettes = { -- a built-in collection of UI color palettes
   { cap = 0x46425e, inactive = 0xb28e7c, active = 0xdd9e43, hover = 0x72677b, text = 0xddc2bd, panel = 0x81828e },
 }
 
-m.mouse_available = (not lovr.headset) or (lovr.headset.getName() == 'Simulator')
+m.mouse_available = (not lovr.headset) or (not lovr.headset.getName())
 m.segments = 7  -- amount of geometry for roundrects and cylinders
 
 m.panels = {}
