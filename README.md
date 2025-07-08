@@ -17,13 +17,13 @@ are instead interested in an immediate mode UI library for LÖVR, check out the
 [lovr-ui](https://github.com/immortalx74/lovr-ui).
 
 ```lua
-chui = require'chui'
+chui = require'chui'                  -- the entire lib is in a single `chiu.lua` file
 
-panel = chui.panel()                  -- panel is a container for widgets which are arranged in rows
-panel.pose:set(0, 1.5, -2):scale(0.2) -- position the panel in 3D space (see lovr's mat4)
+panel = chui.panel()                  -- panel is a container for widgets arranged in rows
+panel.pose:set(0, 1.5, -2):scale(0.2) -- positioning the panel in 3D space (see lovr's mat4)
 
 panel:label{ text = 'Hello!' }
-panel:row()                           -- finishes one row and starts a new row of widgets
+panel:row()                           -- finish the 1st row and start a new row of widgets
 panel:button{ text = 'click me',
   callback = function(self)
     self.text = 'clicked'
@@ -44,71 +44,80 @@ In VR the UI elements are controlled with left & right controller, or with your 
 finger tips. On desktop, the UI interaction uses right mouse button. This is because the LÖVR VR
 simulator already binds the left mouse button for camera rotation.
 
+## The panel
+
+Panel acts as a container for one or more widgets. It handles:
+
+* own position/scale/orientation in world through its `.pose` mat4 property
+* arranging (layouting) the widgets inside its relative coordinate space
+* pointer world -> local transitions during the update
+* assigning the color scheme to the contained widgets
+* drawing of contained widgets and its own frame
+
 ## Layout mechanics
 
-Panel acts as a container for one or more widgets, arranged in horizontal rows. The panel structure
-manages the 3D position/scale/orientation through its pose, takes care of arranging widgets with a
-flexible layout mechanism, handles pointer world-local transitions, assigns the color scheme to
-the contained widgets, and optionally renders a rounded back-panel frame to enhance visibility and
-grounding of the contained widgets within the 3D scene.
+The layout mechanics are made simple and predictable. The outer elements resize to fit inner
+elements. The widgets are grouped into rows or into nested panels.
 
-The panel stores a list of top-to-down rows, and each row is filled with widgets in left-to-right
-order.
+The basic organization lays out the widgets into neat rows, top to down. A row expands horizontally
+to fit all of its contained widgets laying them side by side from left to right. The row's width is
+set to the sum of all the widget widths, its height is set to the height of the tallest widget.
+The rows are laid out one below the other. Panel's width is set to the width of the widest of the
+rows and panel's height is set to the sum of all row heights.
 
 ```lua
 panel = chui.panel()
+panel.pose:set(0, 0, -3)
 panel:label{ text = 'button >' }
-panel:button()
-panel:row()                       -- start of new row
+panel:button{ span = {2, 1} }
+panel:row()                       -- start of a new row
 panel:label{ text = 'toggle >' }
 panel:toggle()
+-- at this point all widgets are centered on the panel, overlapping each other; panel is tiny
 panel:layout()
+-- widgets are now laid out in 2x2 arrangement; panel resizes to fit them
 ```
 
-At the end of panel definition, the `layout()` function is called to arrange widgets.
+![result layout](media/simple-layout.png)
 
-The UI widgets are organized in neat rows. Rows expand horizontally to fit all the widgets. Each row
-also adjusts its height to accommodate the tallest element. By default, rows are centered
-horizontally and widgets are centered vertically within their rows. This alignment can be controlled
-through parameters to panel layout function.
+By default the rows are centered horizontally and the widgets are centered vertically within their
+rows. This alignment can be changed through parameters to panel layout function, and also further
+controlled through the use of nested panels. The **nested-alignment** interactive example may help
+with understanding how the row-based alignment works.
 
 ![layouting](media/row-alignment.png)
 
-Widgets can request more or less space using the `span = {horizontal, vertical}` parameter in their
-initialization table. This can also be changed later, but remember to manually re-layout the panel
-afterwards. Note that increasing vertical span won't make the widget overflow into next row; instead
-the row hight will be increased. The **nested-alignment** interactive example may help with
-understanding how the row-based alignment works.
-
-Unlike more complex and less predictable layout methods, the implementation uses manually defined
-widget dimensions that do not automatically adjust to content size. Users are responsible for
-ensuring sufficient space is allocated for text within UI elements.
+Widgets can request less or more space using the `span = {horizontal, vertical}` parameter in their
+initialization table. Note that widget size is manually defined and widgets won't automatically
+adjust to text length or other content size. Users are responsible for ensuring sufficient space is
+allocated for text or other content within the widget.
 
 In case the built-in layout mechanism is not flexible enough, widgets can be positioned manually
-by specifying relative offsets to the panel center in each widget's `.pose` matrix. All widgets
-should be oriented in +Z direction so they face outwards from the panel. It is also necessary to
-specify panel's dimensions in `.span` table, if the back-panel is rendered or if the panel is
-intended to be nested.
+by specifying relative offsets to the panel center in each widget's `.pose` mat4 instance. All
+widgets should be oriented in +Z direction; with this convention they face outwards from the panel.
+It is also necessary to specify panel's dimensions in `.span` table, if the back-panel is rendered
+or if the panel is intended to be nested.
 
 #### Nesting of panels
 
 The panels can be nested within each other. A nested panel behaves like any other widget in the
-parent panel. Parent will use the dimensions (specified by `span`) of nested panel during the layout
-to place it next to other elements.
+parent panel. Parent will use the dimensions (specified in its `.span`) of nested panel during the
+layout, to reserve its place among other elements.
 
 ![panel nesting](media/panel-nesting.png)
 
 This is an advanced feature that can be used to compose complex components that act as a single
 widget. For example, a checkbox can be constructed from a small toggle button and a label next to
-it; this combination can then be nested in other panels, behaving like a single built-in widget.
+it; this combination can then be nested in other panels behaving like a single built-in widget. See
+the example additional widgets included under `/widgets` dir.
 
-Nesting panels can also be used for fine control over the layout. Each sub-panel can have its own
-horizontal/vertical alignment settings and the parent panel has its own settings. This enables more
-precise positioning for column-based layouts, with each column being a nested panel. Furthermore,
-the nested panel can have a custom `pose` scale to make some parts of UI bigger or smaller.
+Nesting panels can also be used for finer control over the layout. Each sub-panel can have its own
+horizontal/vertical alignment settings while the parent panel has its own settings. This allows for
+more precise positioning in column-based layouts, each column being a nested panel.
 
-The nested panels can specify their own color palettes, enabling diverse and interesting visual
-designs of user interfaces.
+The nested panels can specify their own color palettes to design diverse and interesting visual
+interfaces. One example is to make every odd row have a different background tint for better
+readability; another useful case is making some buttons stand out.
 
 ## chui API
 
@@ -229,33 +238,44 @@ supported range.
 panel:progress{ text = '', value = 0 }
 ```
 
-**Slider** is visual component for modifying a numerical value. The `step` option (for example `step=0.25`) specifies granularity; use `step=1` for integer slider. The `format` string is an
+**Slider** is visual component for modifying a numerical value. The `step` option (for example
+`step=0.25`) specifies granularity; use `step=1` for integer slider. The `format` string is an
 advanced option to customize the appearance of slider label; mainly to control the number of digits
 displayed.
 
-The optional callback function is called with `(self, value)` parameters, when the user stops interacing with the widget. Widget also has `:get()` and `:set(value)` methods.
+The optional callback function is called with `(self, value)` parameters, either when the user stops interacting with the widget (`live_update=false`) or whenever the value changes (
+`live_update=true`). Slider widget also has `:get()` and `:set(value)` methods.
 
 ```lua
-panel:slider{ text = '',  format = '%s %.2f', min = 0, max = 1, value = 0, step = nil, thickness = 0.15, callback = nil }
+panel:slider{ text = '',  format = '%s %.2f', min = 0, max = 1, value = 0, step = nil, thickness = 0.15, callback = nil, live_update = true }
 ```
 
-More custom widgets can be implemented outside the chui source and integrated into the lib with the
-`initWidgetType` function.
+---
+
+Those few widgets are the only ones built into `chui` itself - a basic set for common interactions.
+Custom widgets can be implemented outside the chui source and integrated into the lib with the
+`initWidgetType` function. A widget could be anything that fits the UI paradigm, from rendering a
+textured plane (a minimap) to audio oscilloscope or a virtual thumbstick. Some compound widgets can
+be found in `/widgets` source dir.
 
 ## Demos & utilities
 
 ##### showcase app
 
-A collection of all the built-in widgets, for testing the library and as learning reference.
+A collection of all the built-in widgets, for testing the library and as a learning reference.
 
 ##### nested-alignment
 
 ![nested-alignment screenshot](media/nested-alignment.png)
 
-The sample app constructs 5x5 randomly sized toggle-buttons, and offers 9 ways to align them. It
-demonstrates the nesting of a panel within another, and the alignment mechanics. Note how the top
+The sample app constructs 5x5 randomly sized toggle-buttons and offers 9 ways to align them. It
+demonstrates the nesting of a panel within another and the alignment mechanics. Note how the top
 and bottom alignment works per-row, while left and right options align the entire rows without
 changing the relative positions of widgets within the row.
+
+The shown layout demonstrates that the widgets are not vertically aligned between rows, because
+they have different horizontal spans. When vertical alignment is necessary, each column should be a
+nested table (with the desired 'left' / 'right' / 'center' alignment).
 
 ##### palette-designer
 
