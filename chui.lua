@@ -445,9 +445,10 @@ end
 
 
 function panel:nest(child_panel)
-  assert(child_panel)
+  assert(child_panel and type(child_panel) == 'table' and getmetatable(child_panel) == panel,
+    '`child_panel` is not panel table', tostring(child_panel))
   child_panel.parent = self
-  self.widget_name = 'nested panel'
+  child_panel.widget_type = 'nested panel'
   self:appendWidget(child_panel)
 end
 
@@ -519,6 +520,11 @@ function panel:layout(horizontal_alignment, vertical_alignment)
       x = x + hspan + margin
     end
     y_row = y_row - max_height - margin
+  end
+  -- include panel border in the span
+  if self.frame == 'backpanel' then
+    self.span[1] = self.span[1] + 0.5
+    self.span[2] = self.span[2] + 0.5
   end
   -- calculate offset from the panel's pose to align to edge or corner of the panel
   self.align_offset:set(0, 0)
@@ -661,23 +667,29 @@ function panel:draw(pass, draw_pointers)
     self:getScreenToWorldTransform(pass)
   end
   pass:push()
-  if not self.parent then
+  if self.parent then
+    pass:transform(0, 0, Q)
+  else
     pass:transform(self.pose)
     pass:transform(vec3(self.align_offset))
-  else
-    pass:transform(0, 0, Q)
   end
   pass:setColor(0.820, 0.816, 0.808)
   if self.frame == 'backpanel' then
     pass:setColor(self.palette.panel)
     pass:roundrect(0, 0, -Q / 2,
-      self.span[1] + 0.5, self.span[2] + 0.5, Q ,
+      self.span[1], self.span[2], Q ,
       0, 0,1,0, 0.4)
   end
   pass:setFont(m.font)
   for _, w in ipairs(self.widgets) do
     pass:push()
     pass:transform(w.pose)
+    --[[ widget frames for debugging
+    pass:setColor(1,0,0)
+      pass:box(0, 0, 0.2, w.span[1], w.span[2], 0.01, 0, 0,1,0, 'line')
+      pass:text(w.widget_type or 'FOO', 0, w.span[2] / 2 - 0.2, 0.2, 0.3)
+    pass:setColor(1,1,1)
+    --]]
     w:draw(pass)
     pass:pop()
   end
