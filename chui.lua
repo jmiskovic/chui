@@ -589,9 +589,15 @@ function panel:getMousePointer(pointers, click_offset)
   -- overwrite hand/left in desktop VR sim, or make a new pointer for 3d desktop
   local mouse_pointer = pointers[1] or {'mouse', vec3()}
   -- make a ray in 3D space extending from underneath the mouse cursor to -Z
-  local x, y = lovr.system.getMousePosition()
-  local ray_origin = vec3(self.world_from_screen:mul(x, y, 1))
-  local ray_target = vec3(self.world_from_screen:mul(x, y, 0.001))
+  local mx, my
+  if lovr.system.isMouseGrabbed() then
+    mx, my = lovr.system.getWindowDimensions()
+    mx, my = mx / 2, my / 2
+  else
+    mx, my = lovr.system.getMousePosition()
+  end
+  local ray_origin = vec3(self.world_from_screen:mul(mx, my, 1))
+  local ray_target = vec3(self.world_from_screen:mul(mx, my, 0.001))
   local ray_direction = (ray_target - ray_origin):normalize()
   -- intersect the ray onto panel plane and see if it lands within panel
   local plane_direction = quat(pose):direction()
@@ -697,7 +703,7 @@ function panel:draw(pass, draw_pointers)
   if draw_pointers then
     local pointers = pointers or self:getPointers(false)
     pass:setColor(0x404040)
-    local radius = 0.01
+    local radius = 0.005
     for _, pointer in ipairs(pointers) do
       pass:sphere(mat4(pointer[2]):scale(radius), m.segments, m.segments)
     end
