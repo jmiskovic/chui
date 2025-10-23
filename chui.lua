@@ -10,7 +10,6 @@ end
 
 local Q = 0.02  -- quant; all paddings and margins are its multiples
 local S = 0.05  -- size of widget actuators
-local text_scale = 0.3
 local button_roundness = 0.3
 local slider_roundness = 0.1
 
@@ -82,7 +81,7 @@ end
 
 -- BUTTON ---------------------------------------------------------------------
 m.button = {}
-m.button.defaults = { text = '', thickness = 0.3, callback = nil, held = nil }
+m.button.defaults = { text = '', thickness = 0.3, callback = nil, held = nil, text_scale = 0.3 }
 table.insert(m.widget_types, 'button')
 
 function m.button:init(options)
@@ -92,6 +91,7 @@ function m.button:init(options)
   self.callback = options.callback
   self.held = options.held
   self.thickness = options.thickness
+  self.text_scale = options.text_scale
   self.depth = self.thickness
 end
 
@@ -114,7 +114,7 @@ function m.button:draw(pass)
     button_roundness * 0.75, m.segments)
   -- text
   pass:setColor(self.parent.palette.text)
-  pass:text(self.text, 0, 0, self.depth + Q, text_scale * self.span[2])
+  pass:text(self.text, 0, 0, self.depth + Q, self.text_scale * self.span[2])
 end
 
 
@@ -150,7 +150,7 @@ end
 
 -- TOGGLE ---------------------------------------------------------------------
 m.toggle = {}
-m.toggle.defaults = { text = '', thickness = 0.3, state = false, callback = nil }
+m.toggle.defaults = { text = '', thickness = 0.3, state = false, callback = nil, text_scale = 0.3 }
 table.insert(m.widget_types, 'toggle')
 
 function m.toggle:init(options)
@@ -160,6 +160,7 @@ function m.toggle:init(options)
   self.text = options.text
   self.callback = options.callback
   self.thickness = options.thickness
+  self.text_scale = options.text_scale
   self.depth = self.thickness
 end
 
@@ -182,7 +183,7 @@ function m.toggle:draw(pass)
     button_roundness, m.segments)
   -- text
   pass:setColor(self.parent.palette.text)
-  pass:text(self.text, 0, 0, self.depth + Q, text_scale * self.span[2])
+  pass:text(self.text, 0, 0, self.depth + Q, self.text_scale * self.span[2])
 end
 
 
@@ -223,13 +224,14 @@ end
 
 -- GLOW -------------------------------------------------------------------------
 m.glow = {}
-m.glow.defaults = { text = '', thickness = 0.1, state = false }
+m.glow.defaults = { text = '', thickness = 0.1, state = false, text_scale = 0.3 }
 table.insert(m.widget_types, 'glow')
 
 function m.glow:init(options)
   self.state = options.state
   self.text = options.text
   self.thickness = options.thickness
+  self.text_scale = options.text_scale
 end
 
 
@@ -248,7 +250,7 @@ function m.glow:draw(pass)
     0, 0,1,0, true, nil, nil, m.segments * 6)
   -- text
   pass:setColor(self.parent.palette.text)
-  pass:text(self.text, 0, 0, self.thickness + Q,  text_scale)
+  pass:text(self.text, 0, 0, self.thickness + Q,  self.text_scale)
 end
 
 
@@ -268,11 +270,12 @@ end
 
 -- PROGRESS ---------------------------------------------------------------------
 m.progress = {}
-m.progress.defaults = { text = '', value = 0 }
+m.progress.defaults = { text = '', value = 0, text_scale = 0.3 }
 table.insert(m.widget_types, 'progress')
 
 function m.progress:init(options)
   self.text = options.text
+  self.text_scale = options.text_scale
   self:set(options.value)
 end
 
@@ -291,7 +294,7 @@ function m.progress:draw(pass)
     2 * Q, m.segments)
   -- text
   pass:setColor(self.parent.palette.text)
-  pass:text(self.text, 0, 0.2, 2 * Q,  text_scale)
+  pass:text(self.text, 0, 0.2, 2 * Q,  self.text_scale)
 end
 
 
@@ -313,12 +316,14 @@ end
 m.slider = {}
 m.slider.__index = m.slider
 m.slider.defaults = { text = '',  format = '%s %.2f',
-  min = 0, max = 1, value = 0, step = nil, thickness = 0.15, callback = nil, live_update = true }
+  min = 0, max = 1, value = 0, step = nil,
+  text_scale = 0.3, thickness = 0.15,
+  callback = nil, live_update = true }
 table.insert(m.widget_types, 'slider')
 
 local function roundBy(value, step)
-    local quant, frac = math.modf(value / step)
-    return step * (quant + (frac > 0.5 and 1 or 0))
+  local quant, frac = math.modf(value / step)
+  return step * (quant + (frac > 0.5 and 1 or 0))
 end
 
 
@@ -328,11 +333,13 @@ function m.slider:init(options)
   self.min = options.min
   self.max = options.max
   self.thickness = options.thickness
+  self.text_scale = options.text_scale
   self.callback = options.callback
   self.step = options.step
   self.format = options.format
   self.live_update = options.live_update
   self.altered = false
+
   if not options.format and self.step then
     local digits = math.max(0, math.ceil(-math.log(self.step, 10)))
     self.format = string.format('%%s %%.%df', digits)
@@ -368,7 +375,7 @@ function m.slider:draw(pass)
   -- text
   pass:setColor(self.parent.palette.text)
   pass:text(string.format(self.format, self.text, self.value),
-    0, 0.2, 2 * Q,  text_scale)
+    0, 0.2, 2 * Q,  self.text_scale)
 end
 
 
@@ -784,10 +791,6 @@ function m.setFont(font) -- accepts path to file or loaded font instance
   end
 end
 
-
-function m.setTextSize(size)
-  text_scale = size
-end
 
 -- convenience functions for multiple panels, user can also just call :update & :draw on the panel
 
