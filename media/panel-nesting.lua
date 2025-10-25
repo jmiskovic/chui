@@ -1,5 +1,3 @@
-package.path = package.path .. ";../?.lua"
-
 local chui = require'chui'
 
 local panel, child

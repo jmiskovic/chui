@@ -1,5 +1,4 @@
 -- widgets test app and palette editor
-package.path = package.path .. ";../?.lua" -- needed only if chui.lua is in parent directory
 
 local chui = require'chui'
 

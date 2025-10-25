@@ -425,14 +425,14 @@ function m.panel(options)
   local self = setmetatable({}, panel)
   self.is_panel = true
   self.frame = options.frame == nil and panel_defaults.frame or options.frame
-  self.pose = Mat4(options.pose) -- the options.pose is allowed to be nil
-  self.world_from_screen = Mat4()
+  self.pose = mat4(options.pose) -- the options.pose is allowed to be nil
+  self.world_from_screen = mat4()
   self.widgets = {}
   self.rows = {{}}
   self.span = {1, 1}
   self.palette = options.palette or panel_defaults.palette
   self.visible = true
-  self.align_offset = Vec3()
+  self.align_offset = vector(0,0,0)
   self.layout_options = {'center', 'center'}
   table.insert(m.panels, self)
   return self
@@ -442,7 +442,7 @@ end
 function panel:reset()
   self.widgets = {}
   self.rows = {{}}
-  self.align_offset:set(0, 0)
+  self.align_offset = vector(0, 0, 0)
 end
 
 
@@ -464,7 +464,7 @@ local function scaledSpan(widget)
   local scale = 1
   if widget.is_panel then
     if widget.visible then
-      scale = select(4, widget.pose:unpack())
+      scale = widget.pose:getScale() -- only sx is used
     else
       scale = 0
     end
@@ -522,8 +522,11 @@ function panel:layout(horizontal_alignment, vertical_alignment)
       else
         y = y - max_height / 2
       end
-      local scale = widget.is_panel and select(4, widget.pose:unpack()) or 1
-      widget.pose = Mat4(x + hspan / 2, y, 0):scale(scale)
+      local scale = 1
+      if widget.is_panel then
+        scale =widget.pose:getScale() -- only sx is used
+      end
+      widget.pose = mat4(x + hspan / 2, y, 0):scale(scale)
       x = x + hspan + margin
     end
     y_row = y_row - max_height - margin
@@ -534,16 +537,16 @@ function panel:layout(horizontal_alignment, vertical_alignment)
     self.span[2] = self.span[2] + 0.5
   end
   -- calculate offset from the panel's pose to align to edge or corner of the panel
-  self.align_offset:set(0, 0)
+  self.align_offset = vector(0, 0, 0)
   if horizontal_alignment == 'left' then
-    self.align_offset:add(self.span[1] / 2, 0, 0)
+    self.align_offset = self.align_offset + vector(self.span[1] / 2, 0, 0)
   elseif horizontal_alignment == 'right' then
-    self.align_offset:add(-self.span[1] / 2, 0, 0)
+    self.align_offset = self.align_offset + vector(-self.span[1] / 2, 0, 0)
   end
   if vertical_alignment == 'top' then
-    self.align_offset:add(0, -self.span[2] / 2, 0)
+    self.align_offset = self.align_offset + vector(0, -self.span[2] / 2, 0)
   elseif vertical_alignment == "bottom" then
-    self.align_offset:add(0, self.span[2] / 2, 0)
+    self.align_offset = self.align_offset + vector(0, self.span[2] / 2, 0)
   end
 end
 
@@ -556,18 +559,18 @@ function panel:updateWidgets(dt, pointers)
     local closest_pos
     local closest_name
     if widget.interactive then
-      closest_pos = vec3(math.huge)
+      closest_pos = vector(math.huge, math.huge, math.huge)
       for _, pointer in ipairs(pointers) do -- process each pointer
-        local pos = vec3()
+        local pos = vector(0, 0, 0)
         local is_hovered = false
         -- reproject pointer onto panel coordinate system and check widget's AABB
-        local pos_panel = panel_pose_inv:mul(vec3(pointer[2]))
-        pos = mat4(widget.pose):invert():mul(pos_panel) -- in panel's coordinate system
+        local pos_panel = panel_pose_inv * pointer[2]
+        pos = mat4(widget.pose):invert() * pos_panel -- in widget's coordinate system
         is_hovered = pos.x > -widget.span[1] / 2 and pos.x < widget.span[1] / 2 and
                      pos.y > -widget.span[2] / 2 and pos.y < widget.span[2] / 2 and
                      pos.z < z_front and pos.z > z_back
         if is_hovered and math.abs(pos.z) < math.abs(closest_pos.z) then
-          closest_pos:set(pos)
+          closest_pos = pos
           closest_name = pointer[1]
         end
       end
@@ -581,9 +584,11 @@ function panel:getHeadsetPointers(pointers)
   for _, hand in ipairs(lovr.headset.getHands()) do
     local skeleton = lovr.headset.getSkeleton(hand)
     if skeleton then
-      table.insert(pointers, {hand, vec3(unpack(skeleton[11]))})
+      local x, y, z = table.unpack(skeleton[11])
+      table.insert(pointers, {hand, vector(x, y, z)})
     else
-      table.insert(pointers, {hand, vec3(lovr.headset.getPosition(hand .. '/point'))})
+      local x, y, z = lovr.headset.getPosition(hand .. '/point')
+      table.insert(pointers, {hand, vector(x, y, z)})
     end
   end
 end
@@ -592,9 +597,10 @@ end
 function panel:getMousePointer(pointers, click_offset)
   -- flatten pose with parent poses
   local pose = self:getWorldPose()
-  local scale = select(4, pose:unpack())
+  local scale = vector(pose:getScale()):length()
+
   -- overwrite hand/left in desktop VR sim, or make a new pointer for 3d desktop
-  local mouse_pointer = pointers[1] or {'mouse', vec3()}
+  local mouse_pointer = pointers[1] or {'mouse', vector(0, 0, 0)}
   -- make a ray in 3D space extending from underneath the mouse cursor to -Z
   local mx, my
   if lovr.system.isMouseGrabbed() then
@@ -603,24 +609,26 @@ function panel:getMousePointer(pointers, click_offset)
   else
     mx, my = lovr.system.getMousePosition()
   end
-  local ray_origin = vec3(self.world_from_screen:mul(mx, my, 1))
-  local ray_target = vec3(self.world_from_screen:mul(mx, my, 0.001))
+
+  local ray_origin = self.world_from_screen * vector(mx, my, 1)
+  local ray_target = self.world_from_screen * vector(mx, my, 0.001)
   local ray_direction = (ray_target - ray_origin):normalize()
+
   -- intersect the ray onto panel plane and see if it lands within panel
-  local plane_direction = quat(pose):direction()
+  local plane_direction = quaternion(pose:getOrientation()):direction()
   local dot = ray_direction:dot(plane_direction)
   if math.abs(dot) > 1e-5 then
-    local plane_pos = vec3(pose)
+    local plane_pos = vector(pose:unpack())
     local ray_length = (plane_pos - ray_origin):dot(plane_direction) / dot
     local hit_spot = ray_origin + ray_direction * ray_length
     if click_offset then
       if lovr.system.isMouseDown(2) then
-        mouse_pointer[2]:set(hit_spot)
+        mouse_pointer[2] = hit_spot
       else -- back off the mouse pointer away from panel to emulate the hovering
-        mouse_pointer[2]:set(hit_spot + plane_direction * -(0.25 * scale))
+        mouse_pointer[2] = hit_spot + plane_direction * -(0.25 * scale)
       end
     else
-      mouse_pointer[2]:set(hit_spot)
+      mouse_pointer[2] = hit_spot
     end
   end
   pointers[1] = mouse_pointer
@@ -644,11 +652,9 @@ function panel:getScreenToWorldTransform(pass)
   local clip_from_screen = mat4(-1, -1, 0):scale(2 / w, 2 / h, 1)
   local view_pose = mat4(pass:getViewPose(1))
   local view_proj = pass:getProjection(1, mat4())
-  -- m.is_orthographic = view_proj[16] == 1
   local world_from_screen = view_pose:mul(view_proj:invert()):mul(clip_from_screen)
-  self.world_from_screen:set(world_from_screen)
+  self.world_from_screen = world_from_screen
 end
-
 
 function panel:getWorldPose()
   -- for nested panels, collect all transforms up to parentless root
@@ -661,7 +667,9 @@ function panel:getWorldPose()
     parent = parent.parent
   end
   -- for root apply both alignment translation and its world pose
-  stacked_pose = mat4(child.pose):translate(child.align_offset) * stacked_pose
+  stacked_pose = mat4(child.pose)
+    :translate(child.align_offset.x, child.align_offset.y, child.align_offset.z)
+    * stacked_pose
   return stacked_pose
 end
 
@@ -684,7 +692,7 @@ function panel:draw(pass, draw_pointers)
     pass:transform(0, 0, Q)
   else
     pass:transform(self.pose)
-    pass:transform(vec3(self.align_offset))
+    pass:translate(self.align_offset.x, self.align_offset.y, self.align_offset.z)
   end
   pass:setColor(0.820, 0.816, 0.808)
   if self.frame == 'backpanel' then
@@ -723,7 +731,7 @@ function panel:setVisible(is_visible)
     -- complete any ongoing interactions (hovered pointers)
     local dt = lovr.timer.getDelta()
     for _, widget in ipairs(self.widgets) do
-      widget:update(dt, vec3(math.huge), nil)
+      widget:update(dt, vector(math.huge, math.huge, math.huge), nil)
     end
   end
   self.visible = is_visible

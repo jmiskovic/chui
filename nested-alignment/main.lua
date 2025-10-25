@@ -1,5 +1,3 @@
-package.path = package.path .. ";../?.lua"
-
 local chui = require'chui'
 
 -- panel with 5x5 randomly sized toggle buttons

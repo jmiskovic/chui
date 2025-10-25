@@ -1,5 +1,4 @@
 -- a toy drum sequencer working in 2D desktop mode
-package.path = package.path .. ";../?.lua" -- needed for chui.lua to be located in parent directory
 
 local chui = require'chui'
 

@@ -1,5 +1,3 @@
-package.path = package.path .. ";../?.lua"
-
 local chui = require'chui'
 
 local panel = chui.panel{pose = mat4(0,1.5, -2):scale(0.3), palette = chui.palettes[16]}

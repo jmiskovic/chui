@@ -1,5 +1,4 @@
 -- chui palette designer for modifying and creating new color palettes
-package.path = package.path .. ";../?.lua" -- needed only if chui.lua is in parent directory
 
 local chui = require'chui'
 local coloring = require'coloring'
